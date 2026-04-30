@@ -1,0 +1,89 @@
+/* =============================================
+   نظام المطاعم - Restaurant SaaS
+   الأنماط الرئيسية - نسخة محسنة
+   ============================================= */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Tajawal', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: #a0aec0; border-radius: 10px; }
+
+.fade-in { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* الشريط الجانبي */
+.nav-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 12px;
+  color: #cbd5e1; transition: all 0.2s; cursor: pointer;
+}
+.nav-link:hover { background-color: #4338ca; color: white; }
+.nav-link.active { background-color: #3730a3; color: white; font-weight: 600; }
+
+/* بطاقات المنتجات */
+.product-card {
+  background: white; border-radius: 16px; padding: 16px;
+  cursor: pointer; transition: all 0.15s;
+  border: 2px solid transparent;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  min-height: 110px; justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.product-card:hover { border-color: #818cf8; }
+.product-card:active { transform: scale(0.96); background: #eef2ff; border-color: #6366f1; }
+
+/* سلة المشتريات */
+.cart-item {
+  background: #f9fafb; border-radius: 12px; padding: 12px; margin-bottom: 8px;
+}
+.qty-btn {
+  background: white; border: 1px solid #d1d5db;
+  border-radius: 50%; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s;
+}
+.qty-btn:hover { background: #e5e7eb; }
+.qty-btn:active { background: #6366f1; color: white; }
+
+/* شاشة المطبخ */
+.kitchen-order {
+  border-right: 4px solid #f59e0b;
+  background: white; border-radius: 12px; padding: 16px;
+  transition: all 0.3s;
+}
+.kitchen-order.status-preparing { border-right-color: #3b82f6; }
+.kitchen-order.status-ready { border-right-color: #10b981; }
+
+/* المخزون */
+.low-stock { color: #dc2626; font-weight: bold; }
+
+/* نماذج */
+.form-input {
+  width: 100%; padding: 10px 12px; border: 1px solid #d1d5db;
+  border-radius: 8px; font-size: 0.9rem; transition: border 0.2s;
+}
+.form-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+
+/* نافذة منبثقة (Modal) */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal-content {
+  background: white; border-radius: 16px; padding: 24px;
+  max-width: 500px; width: 90%;
+}
+
+/* زر إضافة سريع */
+.btn-primary {
+  background-color: #6366f1; color: white; padding: 8px 16px;
+  border-radius: 8px; font-weight: 500;
+}
+.btn-primary:hover { background-color: #4f46e5; }
