@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>نظام الكاشير - Restaurant POS</title>
+
+  <!-- Tailwind CSS + RTL Support -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Tajawal', 'Cairo', 'sans-serif'] },
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Google Fonts (Tajawal for Arabic) -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Custom CSS (سيُرفق لاحقاً) -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden font-sans">
+
+  <!-- ========== الشريط العلوي ========== -->
+  <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between flex-shrink-0">
+    <div class="flex items-center gap-4">
+      <h1 class="text-xl font-bold text-gray-800" id="restaurantName">فرع الرياض</h1>
+      <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium" id="currencyBadge">﷼ SAR</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <!-- زر تغيير اللغة -->
+      <button id="langToggleBtn" class="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1">
+        <i class="fas fa-globe"></i>
+        <span id="langText">English</span>
+      </button>
+      <!-- زر القائمة الجانبية -->
+      <button id="menuBtn" class="text-gray-600 hover:text-gray-800 p-2">
+        <i class="fas fa-bars text-2xl"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========== المحتوى الرئيسي ========== -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- شريط الأصناف الجانبي (الفئات) -->
+    <aside class="w-20 md:w-56 bg-white border-r border-gray-200 flex flex-col overflow-y-auto flex-shrink-0" id="categorySidebar">
+      <div class="p-3 border-b">
+        <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider" id="categoriesLabel">الأصناف</h2>
+      </div>
+      <nav class="flex-1 space-y-1 p-2" id="categoryList">
+        <!-- تم إنشاؤه ديناميكياً عبر JS -->
+      </nav>
+    </aside>
+
+    <!-- شبكة المنتجات -->
+    <main class="flex-1 overflow-y-auto p-4 bg-gray-50" id="productGrid">
+      <!-- تم إنشاؤه ديناميكياً عبر JS -->
+      <div class="flex items-center justify-center h-full text-gray-400">
+        <p>تحميل المنتجات...</p>
+      </div>
+    </main>
+
+    <!-- سلة المشتريات (الجانب الأيمن/الأيسر حسب اللغة) -->
+    <aside class="w-80 xl:w-96 bg-white border-l border-gray-200 flex flex-col flex-shrink-0" id="cartPanel">
+      <div class="p-4 border-b flex items-center justify-between">
+        <h2 class="font-bold text-lg" id="cartTitle">الطلب الحالي</h2>
+        <button id="clearCartBtn" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash"></i></button>
+      </div>
+
+      <!-- محتويات السلة -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-3" id="cartItemsContainer">
+        <p class="text-gray-400 text-center mt-8" id="emptyCartMsg">السلة فارغة</p>
+      </div>
+
+      <!-- ملخص السلة وإتمام الطلب -->
+      <div class="border-t p-4 space-y-3 bg-gray-50">
+        <div class="flex justify-between text-sm">
+          <span id="subtotalLabel">المجموع الفرعي</span>
+          <span class="font-mono" id="subtotalValue">0.00</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span id="taxLabel">الضريبة (15%)</span>
+          <span class="font-mono" id="taxValue">0.00</span>
+        </div>
+        <div class="flex justify-between font-bold text-lg border-t pt-2">
+          <span id="totalLabel">الإجمالي</span>
+          <span class="font-mono" id="totalValue">0.00</span>
+        </div>
+        <!-- طرق الدفع السريعة -->
+        <div class="grid grid-cols-3 gap-2">
+          <button class="payment-method-btn bg-green-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-green-700 transition" data-method="cash">
+            <i class="fas fa-money-bill"></i> <span id="cashLabel">نقداً</span>
+          </button>
+          <button class="payment-method-btn bg-blue-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition" data-method="visa">
+            <i class="fab fa-cc-visa"></i> <span>Visa</span>
+          </button>
+          <button class="payment-method-btn bg-purple-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition" data-method="wallet">
+            <i class="fas fa-wallet"></i> <span id="walletLabel">محفظة</span>
+          </button>
+        </div>
+        <button id="placeOrderBtn" disabled
+          class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-indigo-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+          <i class="fas fa-check-circle"></i> <span id="placeOrderLabel">إتمام الطلب</span>
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ========== قائمة الإعدادات الجانبية (Drawer) ========== -->
+  <div id="settingsDrawer" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/40" id="drawerOverlay"></div>
+    <div class="absolute top-0 right-0 h-full w-80 bg-white shadow-xl p-6 transform transition-transform duration-300 ease-in-out" id="drawerContent">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold" id="settingsTitle">الإعدادات</h2>
+        <button id="closeDrawerBtn" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times text-xl"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1" id="branchLabel">الفرع</label>
+          <select id="branchSelect" class="w-full border rounded-lg p-2">
+            <option value="">اختر الفرع</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">اللغة / Language</label>
+          <select id="languageSelect" class="w-full border rounded-lg p-2">
+            <option value="ar">العربية</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1" id="currencyLabel">العملة</label>
+          <select id="currencySelect" class="w-full border rounded-lg p-2">
+            <option value="SAR">ريال سعودي (﷼)</option>
+            <option value="USD">دولار ($)</option>
+            <option value="EGP">جنيه مصري (£)</option>
+          </select>
+        </div>
+        <button id="saveSettingsBtn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+          <i class="fas fa-save"></i> حفظ
+        </button>
+        <hr>
+        <button id="logoutBtn" class="w-full bg-red-100 text-red-700 py-2 rounded-lg hover:bg-red-200 transition">
+          <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== نافذة الدفع (Modal) ========== -->
+  <div id="paymentModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/50" id="paymentOverlay"></div>
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 relative z-10 shadow-xl">
+      <h3 class="text-xl font-bold mb-4" id="paymentTitle">تأكيد الدفع</h3>
+      <p class="text-gray-600 mb-2"><span id="paymentTotalLabel">المبلغ المستحق</span>: <span class="font-bold text-2xl" id="paymentTotal">0.00</span></p>
+      <div class="space-y-3 mt-4">
+        <button id="confirmPaymentCash" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition">نقداً</button>
+        <button id="confirmPaymentCard" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">بطاقة ائتمان</button>
+        <button id="confirmPaymentWallet" class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition">محفظة إلكترونية</button>
+        <button id="cancelPaymentBtn" class="w-full bg-gray-200 text-gray-700 py-2 rounded-lg mt-2 hover:bg-gray-300 transition">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- مكتبات JavaScript الخارجية -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.8/i18next.min.js"></script>
+
+  <!-- ملف الجافاسكربت الرئيسي (سيُرفق لاحقاً) -->
+  <script src="app.js"></script>
+</body>
+</html>
