@@ -1,0 +1,91 @@
+<!-- =============================================
+     صفحة شاشة المطبخ (Kitchen Display)
+     يتم تحميلها داخل #pageContent
+     ============================================= -->
+<div>
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold"><i class="fas fa-fire text-orange-500"></i> شاشة المطبخ</h2>
+    <span class="text-sm text-gray-500" id="kitchenClock">--:--</span>
+  </div>
+
+  <!-- شبكة الطلبات -->
+  <div id="kitchenOrdersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- تُملأ ديناميكياً -->
+  </div>
+</div>
+
+<script>
+  // دالة التهيئة
+  window.initKitchen = function() {
+    updateClock();
+    setInterval(updateClock, 30000);
+    renderKitchenOrders();
+  };
+
+  function updateClock() {
+    const el = document.getElementById('kitchenClock');
+    if (el) el.textContent = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderKitchenOrders() {
+    const grid = document.getElementById('kitchenOrdersGrid');
+    if (!grid || !window.App) return;
+
+    const orders = App.kitchenOrders || [];
+    if (orders.length === 0) {
+      grid.innerHTML = '<p class="text-gray-400 col-span-full text-center py-8">لا توجد طلبات نشطة</p>';
+      return;
+    }
+
+    grid.innerHTML = orders.map(order => `
+      <div class="bg-white rounded-xl p-4 border-r-4 shadow-sm
+        ${order.status === 'new' ? 'border-yellow-500 bg-yellow-50' : ''}
+        ${order.status === 'preparing' ? 'border-blue-500 bg-blue-50' : ''}
+        ${order.status === 'ready' ? 'border-green-500 bg-green-50' : ''}">
+        <div class="flex justify-between items-start mb-3">
+          <h3 class="font-bold text-lg">طلب #${order.id}</h3>
+          <span class="text-xs text-gray-500">${order.time}</span>
+        </div>
+        <ul class="list-disc list-inside text-sm mb-4 space-y-1">
+          ${order.items.map(item => `<li>${item}</li>`).join('')}
+        </ul>
+        <div class="flex gap-2">
+          ${order.status === 'new' ? `
+            <button onclick="updateOrderStatus(${order.id}, 'preparing')" class="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
+              بدء التحضير
+            </button>
+          ` : ''}
+          ${order.status === 'preparing' ? `
+            <button onclick="updateOrderStatus(${order.id}, 'ready')" class="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-sm font-medium hover:bg-green-700">
+              جاهز
+            </button>
+          ` : ''}
+          ${order.status === 'ready' ? `
+            <span class="text-green-600 font-bold"><i class="fas fa-check-circle"></i> جاهز للتسليم</span>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.updateOrderStatus = function(orderId, newStatus) {
+    if (!window.App) return;
+    const order = App.kitchenOrders.find(o => o.id === orderId);
+    if (order) {
+      order.status = newStatus;
+      if (newStatus === 'ready') {
+        // إزالة تلقائية بعد 10 ثواني
+        setTimeout(() => {
+          App.kitchenOrders = App.kitchenOrders.filter(o => o.id !== orderId);
+          renderKitchenOrders();
+        }, 10000);
+      }
+      renderKitchenOrders();
+    }
+  };
+
+  // تشغيل أولي
+  if (typeof window.App !== 'undefined' && App.currentPage === 'kitchen') {
+    window.initKitchen();
+  }
+</script>
