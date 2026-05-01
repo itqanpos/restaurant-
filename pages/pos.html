@@ -1,11 +1,10 @@
 <!-- =============================================
-     صفحة نقطة البيع (POS)
-     يتم تحميلها داخل #pageContent
+     صفحة نقطة البيع (POS) - نسخة متكاملة
+     يتم تحميلها داخل #pageContainer
      ============================================= -->
 <div class="flex h-full -m-6">
   <!-- منطقة المنتجات -->
   <div class="flex-1 flex flex-col p-6">
-    <!-- شريط الخيارات -->
     <div class="flex gap-2 mb-4 flex-wrap">
       <select id="orderType" class="border rounded-lg p-2 text-sm">
         <option value="dine_in">داخل المطعم</option>
@@ -16,7 +15,6 @@
       <input type="text" id="customerName" placeholder="اسم العميل" class="border rounded-lg p-2 flex-1 min-w-[150px] text-sm">
     </div>
 
-    <!-- شبكة المنتجات -->
     <div class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" id="productGrid">
       <!-- تُملأ من initPOS -->
     </div>
@@ -31,94 +29,131 @@
       </button>
     </div>
 
-    <!-- محتويات السلة -->
     <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-3">
       <p class="text-gray-400 text-center mt-8">السلة فارغة</p>
     </div>
 
+    <!-- كود الخصم -->
+    <div class="px-4 py-2 border-t">
+      <div class="flex gap-2">
+        <input type="text" id="discountCode" placeholder="كود الخصم" class="flex-1 border rounded-lg p-2 text-sm">
+        <button onclick="applyDiscount()" class="bg-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-300">تطبيق</button>
+      </div>
+      <div id="discountMessage" class="text-xs mt-1 hidden"></div>
+    </div>
+
     <!-- ملخص السلة وأزرار الدفع -->
     <div class="border-t p-4 bg-gray-50">
-      <div class="flex justify-between font-bold text-lg mb-3">
+      <div class="flex justify-between text-sm"><span>المجموع الفرعي</span><span id="subtotalDisplay">0.00 ج.م</span></div>
+      <div class="flex justify-between text-sm"><span>الخصم</span><span id="discountDisplay" class="text-red-500">0.00 ج.م</span></div>
+      <div class="flex justify-between font-bold text-lg mt-1 mb-3">
         <span>الإجمالي</span>
         <span id="cartTotal">0.00 ج.م</span>
       </div>
-      <div class="grid grid-cols-3 gap-2 mb-3">
-        <button onclick="placeOrder('cash')" class="bg-green-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-green-700">
-          <i class="fas fa-money-bill"></i> نقداً
+
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <button onclick="openSplitBill()" class="bg-gray-200 p-2 rounded-lg text-sm hover:bg-gray-300">
+          <i class="fas fa-divide"></i> تقسيم
         </button>
-        <button onclick="placeOrder('visa')" class="bg-blue-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-          <i class="fab fa-cc-visa"></i> فيزا
-        </button>
-        <button onclick="placeOrder('wallet')" class="bg-purple-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-purple-700">
-          <i class="fas fa-wallet"></i> محفظة
+        <button onclick="App.placeOrder('cash')" id="placeOrderBtn" disabled
+          class="bg-indigo-600 text-white p-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition disabled:bg-gray-400">
+          إتمام
         </button>
       </div>
-      <button onclick="placeOrder('cash')" id="placeOrderBtn" disabled
-        class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed">
-        إتمام الطلب
-      </button>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="App.placeOrder('cash')" class="bg-green-600 text-white p-2 rounded-lg text-sm">نقداً</button>
+        <button onclick="App.placeOrder('visa')" class="bg-blue-600 text-white p-2 rounded-lg text-sm">فيزا</button>
+        <button onclick="App.placeOrder('wallet')" class="bg-purple-600 text-white p-2 rounded-lg text-sm">محفظة</button>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- مودال تقسيم الفاتورة -->
+<div id="splitBillModal" class="modal hidden">
+  <div class="modal-content">
+    <h3 class="text-lg font-bold mb-4">تقسيم الفاتورة</h3>
+    <p class="mb-3">الإجمالي: <strong id="splitTotalAmount">0.00 ج.م</strong></p>
+    <div class="space-y-3">
+      <button onclick="splitEqually()" class="w-full bg-indigo-100 text-indigo-700 py-2 rounded-lg hover:bg-indigo-200">بالتساوي</button>
+      <div class="flex gap-2 items-center">
+        <span>عدد الأشخاص:</span>
+        <input type="number" id="splitPeopleCount" value="2" min="2" class="border rounded-lg p-1 w-16 text-center">
+      </div>
+      <button onclick="splitByPeople()" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">تقسيم</button>
+    </div>
+    <button onclick="closeSplitModal()" class="mt-4 text-gray-500">إلغاء</button>
+  </div>
+</div>
+
 <script>
-  // دالة التهيئة
+  // ========== دوال الكاشير ==========
   window.initPOS = function() {
-    // تنظيف السلة إذا كانت محملة مسبقاً
-    if (window.App && App.cart && App.cart.length > 0) {
-      App.cart = [];
-    }
+    if (window.App && App.cart && App.cart.length > 0) App.cart = [];
     renderProducts();
     updateCartDisplay();
   };
 
-  // عرض المنتجات
   function renderProducts() {
     const grid = document.getElementById('productGrid');
     if (!grid || !window.App) return;
-
-    const products = App.products || [];
+    const products = App.products.length ? App.products : (App.products = [
+      { id: 1, name: 'برجر دجاج', price: 65, category: 'وجبات رئيسية' },
+      { id: 2, name: 'برجر لحم', price: 75, category: 'وجبات رئيسية' },
+      { id: 3, name: 'بطاطس مقلية', price: 25, category: 'مقبلات' },
+      { id: 4, name: 'كولا', price: 15, category: 'مشروبات' },
+      { id: 5, name: 'عصير برتقال', price: 20, category: 'مشروبات' }
+    ]);
     grid.innerHTML = products.map(p => `
-      <div class="product-card bg-white rounded-xl shadow-sm p-4 text-center cursor-pointer border-2 border-transparent hover:border-indigo-400 transition"
-           onclick="addToCart(${p.id}, '${p.name}', ${p.price})">
-        <div class="text-xs text-gray-400 mb-1">${p.category}</div>
+      <div class="product-card bg-white rounded-xl shadow-sm p-4 text-center cursor-pointer border-2 border-transparent hover:border-indigo-400"
+        onclick="addToCart(${p.id}, '${p.name}', ${p.price})">
+        <div class="text-xs text-gray-400 mb-1">${p.category || ''}</div>
         <div class="font-bold">${p.name}</div>
         <div class="text-green-600 font-bold mt-2">${p.price} ج.م</div>
       </div>
     `).join('');
   }
 
-  // إضافة للسلة
   window.addToCart = function(id, name, price) {
     if (!window.App) return;
     const existing = App.cart.find(item => item.id === id);
-    if (existing) {
-      existing.qty++;
-    } else {
-      App.cart.push({ id, name, price, qty: 1 });
-    }
+    existing ? existing.qty++ : App.cart.push({ id, name, price, qty: 1 });
     updateCartDisplay();
   };
 
-  // تعديل الكمية
   window.changeQty = function(id, delta) {
     if (!window.App) return;
     const item = App.cart.find(i => i.id === id);
     if (!item) return;
     item.qty += delta;
-    if (item.qty <= 0) {
-      App.cart = App.cart.filter(i => i.id !== id);
-    }
+    if (item.qty <= 0) App.cart = App.cart.filter(i => i.id !== id);
     updateCartDisplay();
   };
 
-  // مسح السلة
   window.clearCart = function() {
     if (window.App) App.cart = [];
     updateCartDisplay();
   };
 
-  // تحديث عرض السلة
+  window.applyDiscount = async function() {
+    const code = document.getElementById('discountCode').value.trim();
+    const msgEl = document.getElementById('discountMessage');
+    if (!code) return;
+    // محاكاة: في الواقع يتم البحث في Supabase
+    const { data: discounts } = await supabase.from('discounts').select('*').eq('code', code).eq('is_active', true).single();
+    if (discounts) {
+      App.appliedDiscount = discounts;
+      msgEl.textContent = `خصم ${discounts.value}${discounts.type === 'percentage' ? '%' : ' ج.م'} تم تطبيقه`;
+      msgEl.className = 'text-xs mt-1 text-green-600';
+    } else {
+      App.appliedDiscount = null;
+      msgEl.textContent = 'كود الخصم غير صالح';
+      msgEl.className = 'text-xs mt-1 text-red-500';
+    }
+    msgEl.classList.remove('hidden');
+    updateCartDisplay();
+  };
+
   function updateCartDisplay() {
     const container = document.getElementById('cartItems');
     const totalEl = document.getElementById('cartTotal');
@@ -127,7 +162,9 @@
 
     if (App.cart.length === 0) {
       container.innerHTML = '<p class="text-gray-400 text-center mt-8">السلة فارغة</p>';
-      if (totalEl) totalEl.textContent = '0.00 ج.م';
+      totalEl.textContent = '0.00 ج.م';
+      document.getElementById('subtotalDisplay').textContent = '0.00 ج.م';
+      document.getElementById('discountDisplay').textContent = '0.00 ج.م';
       if (placeBtn) placeBtn.disabled = true;
       return;
     }
@@ -146,42 +183,41 @@
       </div>
     `).join('');
 
-    const total = App.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-    if (totalEl) totalEl.textContent = `${total.toFixed(2)} ج.م`;
+    const subtotal = App.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    let discountAmount = 0;
+    if (App.appliedDiscount) {
+      discountAmount = App.appliedDiscount.type === 'percentage' 
+        ? subtotal * (App.appliedDiscount.value / 100) 
+        : App.appliedDiscount.value;
+    }
+    const total = Math.max(0, subtotal - discountAmount);
+
+    document.getElementById('subtotalDisplay').textContent = `${subtotal.toFixed(2)} ج.م`;
+    document.getElementById('discountDisplay').textContent = discountAmount ? `-${discountAmount.toFixed(2)} ج.م` : '0.00 ج.م';
+    totalEl.textContent = `${total.toFixed(2)} ج.م`;
     if (placeBtn) placeBtn.disabled = false;
   }
 
-  // إتمام الطلب
-  window.placeOrder = function(method) {
-    if (!window.App || App.cart.length === 0) return;
-
-    const orderId = Math.floor(Math.random() * 9000) + 1000;
-    const total = App.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-    const items = App.cart.map(i => `${i.name} x${i.qty}`);
-
-    // إضافة للمطبخ
-    if (App.kitchenOrders) {
-      App.kitchenOrders.unshift({
-        id: orderId,
-        items: items,
-        status: 'new',
-        time: new Date().toLocaleTimeString('ar-EG')
-      });
-    }
-
-    // نقاط الولاء
-    const points = Math.floor(total / 10);
-    if (App.loyaltyPoints !== undefined) {
-      App.loyaltyPoints += points;
-    }
-
-    alert(`تم الطلب #${orderId}\nستكسب ${points} نقطة ولاء`);
-    App.cart = [];
-    updateCartDisplay();
+  // تقسيم الفاتورة
+  window.openSplitBill = function() {
+    if (App.cart.length === 0) return;
+    document.getElementById('splitTotalAmount').textContent = document.getElementById('cartTotal').textContent;
+    document.getElementById('splitBillModal').classList.remove('hidden');
+  };
+  window.closeSplitModal = function() {
+    document.getElementById('splitBillModal').classList.add('hidden');
+  };
+  window.splitEqually = function() {
+    const people = parseInt(document.getElementById('splitPeopleCount').value) || 2;
+    const totalText = document.getElementById('cartTotal').textContent;
+    const total = parseFloat(totalText);
+    const perPerson = (total / people).toFixed(2);
+    alert(`كل شخص يدفع ${perPerson} ج.م`);
+    closeSplitModal();
+  };
+  window.splitByPeople = function() {
+    splitEqually();
   };
 
-  // تشغيل أولي
-  if (typeof window.App !== 'undefined' && App.currentPage === 'pos') {
-    window.initPOS();
-  }
+  if (window.App && App.currentPage === 'pos') window.initPOS();
 </script>
