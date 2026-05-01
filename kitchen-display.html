@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>شاشة المطبخ - KDS</title>
+  <!-- نفس المكتبات السابقة -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* تحسينات للشاشات الكبيرة */
+    body { font-family: 'Tajawal', sans-serif; background: #0f172a; margin: 0; padding: 2rem; color: white; }
+    .order-card {
+      background: #1e293b; border-radius: 1.5rem; padding: 2rem;
+      border-right: 12px solid #f59e0b; min-height: 200px;
+    }
+    .order-card.status-preparing { border-right-color: #3b82f6; }
+    .order-card.status-ready { border-right-color: #10b981; }
+    .order-number { font-size: 2.5rem; font-weight: 800; }
+    .order-items { font-size: 1.5rem; margin-top: 1rem; }
+    .order-time { font-size: 1rem; color: #94a3b8; }
+    /* رسالة البداية */
+    .empty-message { font-size: 2rem; color: #64748b; }
+  </style>
+</head>
+<body class="h-screen flex flex-col">
+
+  <!-- شريط علوي -->
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="text-4xl font-bold"><i class="fas fa-fire text-orange-500"></i> المطبخ</h1>
+    <div class="text-3xl font-mono" id="liveClock">00:00</div>
+  </div>
+
+  <!-- شبكة الطلبات -->
+  <div id="ordersGrid" class="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 overflow-y-auto">
+    <p class="empty-message text-center col-span-full mt-20">بانتظار الطلبات الجديدة...</p>
+  </div>
+
+  <!-- نافذة رسالة الترحيب (تختفي تلقائيا) -->
+  <div id="welcomeOverlay" style="position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:99;font-size:3rem;">
+    <div class="text-center">
+      <i class="fas fa-tv text-6xl mb-4"></i>
+      <p>شاشة المطبخ جاهزة</p>
+      <p class="text-xl mt-4 text-gray-400">اضغط F11 للملء الشاشة</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/modules/api.js"></script>
+  <script>
+    // إخفاء شاشة الترحيب بعد 5 ثواني
+    setTimeout(() => {
+      const overlay = document.getElementById('welcomeOverlay');
+      if (overlay) overlay.style.display = 'none';
+    }, 5000);
+
+    const KDS = {
+      orders: [],
+      channel: null,
+      branchId: null,
+
+      async init() {
+        const params = new URLSearchParams(window.location.search);
+        this.branchId = params.get('branch') || 'b1';
+        await this.loadActiveOrders();
+        this.subscribeToOrders();
+        setInterval(() => {
+          document.getElementById('liveClock').textContent = new Date().toLocaleTimeString('ar-EG');
+        }, 1000);
+      },
+
+      async loadActiveOrders() {
+        const { data } = await window.supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .in('status', ['new', 'preparing'])
+          .eq('branch_id', this.branchId)
+          .order('created_at', { ascending: true });
+
+        if (data) {
+          this.orders = data.map(o => ({
+            id: o.id,
+            number: o.order_number,
+            items: o.order_items?.map(i => `${i.name} ×${i.quantity}`) || [],
+            status: o.status,
+            time: o.created_at
+          }));
+          this.render();
+        }
+      },
+
+      subscribeToOrders() {
+        this.channel = window.Api.subscribeToNewOrders(this.branchId, (newOrder) => {
+          const exists = this.orders.find(o => o.id === newOrder.id);
+          if (!exists) {
+            this.orders.unshift({
+              id: newOrder.id,
+              number: newOrder.order_number,
+              items: [],
+              status: 'new',
+              time: new Date().toISOString()
+            });
+            this.render();
+          }
+        });
+      },
+
+      render() {
+        const grid = document.getElementById('ordersGrid');
+        if (!this.orders.length) {
+          grid.innerHTML = '<p class="empty-message text-center col-span-full mt-20">لا توجد طلبات نشطة</p>';
+          return;
+        }
+        grid.innerHTML = this.orders.map(order => `
+          <div class="order-card status-${order.status}">
+            <div class="flex justify-between items-start">
+              <h3 class="order-number">#${order.number}</h3>
+              <span class="order-time">${formatTimeAgo(order.time)}</span>
+            </div>
+            <ul class="order-items list-disc list-inside space-y-2">
+              ${order.items.length ? order.items.map(i => `<li>${i}</li>`).join('') : '<li>...</li>'}
+            </ul>
+          </div>
+        `).join('');
+      }
+    };
+
+    function formatTimeAgo(dateString) {
+      const mins = Math.floor((new Date() - new Date(dateString)) / 60000);
+      if (mins < 1) return 'الآن';
+      return `منذ ${mins} دقيقة`;
+    }
+
+    KDS.init();
+  </script>
+</body>
+</html>
