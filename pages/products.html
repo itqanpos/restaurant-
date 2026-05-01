@@ -1,0 +1,45 @@
+<div>
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold">إدارة قائمة الطعام</h2>
+    <button onclick="openProductModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">
+      <i class="fas fa-plus"></i> إضافة منتج
+    </button>
+  </div>
+
+  <!-- جدول المنتجات -->
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="p-3 text-right">المنتج</th>
+          <th class="p-3">التصنيف</th>
+          <th class="p-3">السعر</th>
+          <th class="p-3">الحالة</th>
+          <th class="p-3">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="productsTableBody">
+        <tr><td colspan="5" class="text-center py-8 text-gray-400">جاري التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- نافذة إضافة / تعديل منتج -->
+  <div id="productModal" class="modal hidden">
+    <div class="modal-content">
+      <h3 class="text-lg font-bold mb-4" id="modalTitle">إضافة منتج جديد</h3>
+      <form id="productForm" onsubmit="saveProduct(event)">
+        <input type="hidden" id="productId">
+        <div class="space-y-3">
+          <input type="text" id="productName" placeholder="اسم المنتج" required class="w-full border rounded-xl p-3">
+          <select id="productCategory" class="w-full border rounded-xl p-3"></select>
+          <input type="number" id="productPrice" placeholder="السعر (ج.م)" step="0.01" required class="w-full border rounded-xl p-3">
+        </div>
+        <div class="flex gap-2 mt-6 justify-end">
+          <button type="button" onclick="closeProductModal()" class="px-4 py-2 bg-gray-200 rounded-lg">إلغاء</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
