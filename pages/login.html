@@ -1,6 +1,5 @@
 <!-- =============================================
-     صفحة تسجيل الدخول (Login) - نسخة Supabase
-     يتم تحميلها داخل #pageContent
+     صفحة تسجيل الدخول / التسجيل
      ============================================= -->
 <div class="min-h-full flex items-center justify-center">
   <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
@@ -8,93 +7,85 @@
       <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <i class="fas fa-utensils text-2xl text-indigo-600"></i>
       </div>
-      <h2 class="text-2xl font-bold text-gray-800">تسجيل الدخول</h2>
-      <p class="text-gray-500 mt-2">أهلاً بك في نظام إدارة المطاعم</p>
+      <h2 class="text-2xl font-bold text-gray-800">مطعم العائلة</h2>
+      <p class="text-gray-500 mt-2">نظام إدارة المطاعم</p>
     </div>
 
-    <form id="loginForm" class="space-y-5">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
-        <div class="relative">
-          <i class="fas fa-envelope absolute right-3 top-3.5 text-gray-400"></i>
-          <input type="email" id="email" required
-            class="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl"
-            placeholder="example@restaurant.com">
-        </div>
-      </div>
+    <!-- تبويبات -->
+    <div class="flex mb-6 bg-gray-100 rounded-xl p-1">
+      <button id="tabLogin" class="flex-1 py-2 rounded-lg text-sm font-medium bg-white shadow">تسجيل الدخول</button>
+      <button id="tabSignup" class="flex-1 py-2 rounded-lg text-sm font-medium text-gray-500">إنشاء حساب</button>
+    </div>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
-        <div class="relative">
-          <i class="fas fa-lock absolute right-3 top-3.5 text-gray-400"></i>
-          <input type="password" id="password" required
-            class="w-full pr-10 pl-10 py-3 border border-gray-300 rounded-xl"
-            placeholder="••••••••">
-          <button type="button" onclick="togglePassword()"
-            class="absolute left-3 top-3.5 text-gray-400 hover:text-gray-600">
-            <i class="fas fa-eye" id="toggleIcon"></i>
-          </button>
-        </div>
-      </div>
-
-      <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm"></div>
-
-      <button type="submit"
-        class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-indigo-700">
-        <i class="fas fa-sign-in-alt ml-2"></i> دخول
-      </button>
+    <!-- نموذج تسجيل الدخول -->
+    <form id="loginForm" class="space-y-4">
+      <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required class="w-full border rounded-xl p-3">
+      <input type="password" id="loginPassword" placeholder="كلمة المرور" required class="w-full border rounded-xl p-3">
+      <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">دخول</button>
     </form>
+
+    <!-- نموذج إنشاء حساب (مخفي افتراضيا) -->
+    <form id="signupForm" class="space-y-4 hidden">
+      <input type="text" id="signupName" placeholder="الاسم الكامل" required class="w-full border rounded-xl p-3">
+      <input type="email" id="signupEmail" placeholder="البريد الإلكتروني" required class="w-full border rounded-xl p-3">
+      <input type="password" id="signupPassword" placeholder="كلمة المرور" required class="w-full border rounded-xl p-3">
+      <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold">إنشاء حساب</button>
+    </form>
+
+    <div id="authMessage" class="mt-4 text-sm text-center hidden"></div>
   </div>
 </div>
 
 <script>
   window.initLogin = function() {
     document.getElementById('appHeader').style.display = 'none';
-    document.getElementById('sidebar').style.display = 'none';
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    document.getElementById('appSidebar').style.display = 'none';
+
+    const tabLogin = document.getElementById('tabLogin');
+    const tabSignup = document.getElementById('tabSignup');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+
+    tabLogin.addEventListener('click', () => {
+      tabLogin.classList.add('bg-white','shadow');
+      tabSignup.classList.remove('bg-white','shadow');
+      loginForm.classList.remove('hidden');
+      signupForm.classList.add('hidden');
+    });
+
+    tabSignup.addEventListener('click', () => {
+      tabSignup.classList.add('bg-white','shadow');
+      tabLogin.classList.remove('bg-white','shadow');
+      signupForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+    });
+
+    // تسجيل الدخول
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
+      if (error) return alert(error.message);
+      window.App.user = data.user;
+      window.location.reload();
+    });
+
+    // إنشاء حساب
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const { data, error } = await window.supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } }
+      });
+      if (error) return alert(error.message);
+      alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
+      // العودة إلى تبويب تسجيل الدخول
+      tabLogin.click();
+    });
   };
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const errorDiv = document.getElementById('loginError');
-
-    if (!window.supabase) {
-      errorDiv.textContent = 'Supabase غير متصل. تأكد من تحميل الصفحة عبر خادم محلي.';
-      errorDiv.classList.remove('hidden');
-      return;
-    }
-
-    const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      errorDiv.textContent = error.message.includes('Invalid login') ?
-        'البريد الإلكتروني أو كلمة المرور غير صحيحة' : error.message;
-      errorDiv.classList.remove('hidden');
-      return;
-    }
-
-    // نجاح الدخول
-    errorDiv.classList.add('hidden');
-    document.getElementById('appHeader').style.display = 'flex';
-    document.getElementById('sidebar').style.display = 'flex';
-    window.App.user = data.user;
-    window.location.hash = 'dashboard';
-    if (typeof loadPage === 'function') loadPage('dashboard');
-  }
-
-  window.togglePassword = function() {
-    const input = document.getElementById('password');
-    const icon = document.getElementById('toggleIcon');
-    if (input.type === 'password') {
-      input.type = 'text';
-      icon.className = 'fas fa-eye-slash';
-    } else {
-      input.type = 'password';
-      icon.className = 'fas fa-eye';
-    }
-  };
-
-  if (window.App && App.currentPage === 'login') window.initLogin();
 </script>
