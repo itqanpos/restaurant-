@@ -1,6 +1,3 @@
-<!-- =============================================
-     صفحة تسجيل الدخول / التسجيل
-     ============================================= -->
 <div class="min-h-full flex items-center justify-center">
   <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
     <div class="text-center mb-8">
@@ -10,82 +7,20 @@
       <h2 class="text-2xl font-bold text-gray-800">مطعم العائلة</h2>
       <p class="text-gray-500 mt-2">نظام إدارة المطاعم</p>
     </div>
-
-    <!-- تبويبات -->
     <div class="flex mb-6 bg-gray-100 rounded-xl p-1">
       <button id="tabLogin" class="flex-1 py-2 rounded-lg text-sm font-medium bg-white shadow">تسجيل الدخول</button>
       <button id="tabSignup" class="flex-1 py-2 rounded-lg text-sm font-medium text-gray-500">إنشاء حساب</button>
     </div>
-
-    <!-- نموذج تسجيل الدخول -->
     <form id="loginForm" class="space-y-4">
       <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required class="w-full border rounded-xl p-3">
       <input type="password" id="loginPassword" placeholder="كلمة المرور" required class="w-full border rounded-xl p-3">
       <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">دخول</button>
     </form>
-
-    <!-- نموذج إنشاء حساب (مخفي افتراضيا) -->
     <form id="signupForm" class="space-y-4 hidden">
       <input type="text" id="signupName" placeholder="الاسم الكامل" required class="w-full border rounded-xl p-3">
       <input type="email" id="signupEmail" placeholder="البريد الإلكتروني" required class="w-full border rounded-xl p-3">
       <input type="password" id="signupPassword" placeholder="كلمة المرور" required class="w-full border rounded-xl p-3">
       <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold">إنشاء حساب</button>
     </form>
-
-    <div id="authMessage" class="mt-4 text-sm text-center hidden"></div>
   </div>
 </div>
-
-<script>
-  window.initLogin = function() {
-    document.getElementById('appHeader').style.display = 'none';
-    document.getElementById('appSidebar').style.display = 'none';
-
-    const tabLogin = document.getElementById('tabLogin');
-    const tabSignup = document.getElementById('tabSignup');
-    const loginForm = document.getElementById('loginForm');
-    const signupForm = document.getElementById('signupForm');
-
-    tabLogin.addEventListener('click', () => {
-      tabLogin.classList.add('bg-white','shadow');
-      tabSignup.classList.remove('bg-white','shadow');
-      loginForm.classList.remove('hidden');
-      signupForm.classList.add('hidden');
-    });
-
-    tabSignup.addEventListener('click', () => {
-      tabSignup.classList.add('bg-white','shadow');
-      tabLogin.classList.remove('bg-white','shadow');
-      signupForm.classList.remove('hidden');
-      loginForm.classList.add('hidden');
-    });
-
-    // تسجيل الدخول
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value;
-      const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
-      if (error) return alert(error.message);
-      window.App.user = data.user;
-      window.location.reload();
-    });
-
-    // إنشاء حساب
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fullName = document.getElementById('signupName').value.trim();
-      const email = document.getElementById('signupEmail').value.trim();
-      const password = document.getElementById('signupPassword').value;
-      const { data, error } = await window.supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } }
-      });
-      if (error) return alert(error.message);
-      alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
-      // العودة إلى تبويب تسجيل الدخول
-      tabLogin.click();
-    });
-  };
-</script>
