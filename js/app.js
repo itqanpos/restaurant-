@@ -1,6 +1,6 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// التطبيق الرئيسي (متوافق مع api.js)
+// التطبيق الرئيسي (النسخة الكاملة)
 // =============================================
 
 const App = {
@@ -17,7 +17,10 @@ const App = {
   branch: null,
   appliedDiscount: null,
 
-  formatCurrency(amount) { return Number(amount).toFixed(2) + ' ج.م'; },
+  // ---------- دوال مساعدة ----------
+  formatCurrency(amount) {
+    return Number(amount).toFixed(2) + ' ج.م';
+  },
 
   t(key) {
     const dict = {
@@ -47,6 +50,7 @@ const App = {
     }
   },
 
+  // ---------- تحميل الصفحات ----------
   async loadPage(page) {
     const container = document.getElementById('pageContainer');
     if (!container) return;
@@ -62,12 +66,16 @@ const App = {
     document.getElementById('headerTitle').textContent = this.t(page);
     this.currentPage = page;
     sessionStorage.setItem('lastPage', page);
-    const initFn = window[`init${page.charAt(0).toUpperCase() + page.slice(1)}`];
-    if (typeof initFn === 'function') initFn();
+
+    const initFuncName = 'init' + page.charAt(0).toUpperCase() + page.slice(1);
+    if (typeof window[initFuncName] === 'function') {
+      window[initFuncName]();
+    }
   },
 
+  // ---------- الجلسة والمصادقة ----------
   async checkSession() {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await window.supabase.auth.getSession();
     if (data.session) {
       this.user = data.session.user;
       await this.loadRestaurantData();
@@ -83,7 +91,7 @@ const App = {
 
   async loadRestaurantData() {
     if (!this.user) return;
-    const { data } = await supabase
+    const { data } = await window.supabase
       .from('user_restaurant_roles')
       .select('restaurant_id, restaurants(*), branches(*), roles(name)')
       .eq('user_id', this.user.id).single();
@@ -96,20 +104,82 @@ const App = {
     }
   },
 
+  showUI() {
+    document.getElementById('appHeader').style.display = 'flex';
+    document.getElementById('appSidebar').style.display = 'flex';
+  },
+
+  hideUI() {
+    document.getElementById('appHeader').style.display = 'none';
+    document.getElementById('appSidebar').style.display = 'none';
+  },
+
   async logout() {
-    await supabase.auth.signOut();
+    await window.supabase.auth.signOut();
     this.user = null;
+    this.cart = [];
+    this.appliedDiscount = null;
     this.loadPage('login');
+  },
+
+  // ---------- الكاشير (POS) ----------
+  addToCart(id, name, price) {
+    const existing = this.cart.find(item => item.id === id);
+    if (existing) {
+      existing.qty++;
+    } else {
+      this.cart.push({ id, name, price, qty: 1 });
+    }
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
+  },
+
+  changeQty(id, delta) {
+    const item = this.cart.find(i => i.id === id);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) {
+      this.cart = this.cart.filter(i => i.id !== id);
+    }
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
+  },
+
+  clearCart() {
+    this.cart = [];
+    this.appliedDiscount = null;
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
+  },
+
+  getCartTotals() {
+    const subtotal = this.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    let discount = 0;
+    if (this.appliedDiscount) {
+      discount = this.appliedDiscount.type === 'percentage' ? subtotal * (this.appliedDiscount.value / 100) : this.appliedDiscount.value;
+    }
+    const total = Math.max(0, subtotal - discount);
+    return { subtotal, discount, total };
   },
 
   async placeOrder() {
     if (!this.cart.length) return;
-    const subtotal = this.cart.reduce((s, i) => s + i.price * i.qty, 0);
-    const total = Math.max(0, subtotal - (this.appliedDiscount?.value || 0));
-    const order = { restaurant_id: this.restaurant.id, branch_id: this.branch.id, type: 'dine_in', status: 'new', subtotal, total, source: 'pos' };
-    await window.Api.createOrder(order, this.cart.map(i => ({ product_id: i.id, name: i.name, price: i.price, quantity: i.qty })));
-    this.cart = [];
-    alert('تم الطلب بنجاح');
+    const { subtotal, discount, total } = this.getCartTotals();
+    const order = {
+      restaurant_id: this.restaurant?.id,
+      branch_id: this.branch?.id,
+      type: 'dine_in',
+      status: 'new',
+      subtotal,
+      discount_amount: discount,
+      total,
+      source: 'pos',
+      created_by: this.user?.id
+    };
+    try {
+      await window.Api.createOrder(order, this.cart.map(i => ({ product_id: i.id, name: i.name, price: i.price, quantity: i.qty })));
+      alert('تم الطلب بنجاح');
+      this.clearCart();
+    } catch (e) {
+      alert('فشل إنشاء الطلب: ' + e.message);
+    }
   }
 };
 
