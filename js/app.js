@@ -1,242 +1,171 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// التطبيق الرئيسي (النسخة النهائية الكاملة)
+// التطبيق الرئيسي (النسخة النهائية مع API)
 // =============================================
 
 const SUPABASE_URL = 'https://xisosjmybqmuzveffhdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM';
 
-// إنشاء عميل Supabase بشكل آمن
 const supabase = window.supabase?.createClient
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-  : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+    : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 window.supabase = supabase;
 
 console.log('✅ app.js تم تحميله بنجاح');
 
 // ============================================
-// كائن التطبيق الرئيسي
+// طبقة API (مضمنة مؤقتًا لتجنب أخطاء الاستيراد)
+// ============================================
+window.Api = {
+    async getProducts(restaurantId) {
+        const { data, error } = await supabase.from('products').select('*, categories(name)').eq('restaurant_id', restaurantId).eq('is_available', true).order('name');
+        if (error) throw error;
+        return data;
+    },
+    async getInventory(restaurantId) {
+        const { data, error } = await supabase.from('inventory_items').select('*').eq('restaurant_id', restaurantId).order('name');
+        if (error) throw error;
+        return data;
+    },
+    async createOrder(orderData, items) {
+        const { data: order, error } = await supabase.from('orders').insert(orderData).select().single();
+        if (error) throw error;
+        const orderItems = items.map(item => ({ ...item, order_id: order.id }));
+        await supabase.from('order_items').insert(orderItems);
+        return order;
+    },
+    async getDiscounts(restaurantId) {
+        const { data, error } = await supabase.from('discounts').select('*').eq('restaurant_id', restaurantId).eq('is_active', true);
+        if (error) throw error;
+        return data;
+    },
+    async addInventoryItem(item) {
+        const { data, error } = await supabase.from('inventory_items').insert(item).select().single();
+        if (error) throw error;
+        return data;
+    },
+    async updateInventoryItem(id, updates) {
+        const { error } = await supabase.from('inventory_items').update(updates).eq('id', id);
+        if (error) throw error;
+    },
+    subscribeToNewOrders(branchId, callback) {
+        return supabase
+            .channel('new-orders')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, payload => callback(payload.new))
+            .subscribe();
+    }
+};
+
+// ============================================
+// كائن التطبيق
 // ============================================
 const App = {
-  user: null,
-  session: null,
-  currentPage: 'dashboard',
-  language: 'ar',
-  currency: 'EGP',
-  taxRate: 0,
-  cart: [],
-  products: [],
-  inventory: [],
-  kitchenOrders: [],
-  loyaltyPoints: 0,
-  restaurant: null,
-  branch: null,
-  appliedDiscount: null,
+    user: null,
+    currentPage: 'dashboard',
+    language: 'ar',
+    currency: 'EGP',
+    taxRate: 14,
+    cart: [],
+    products: [],
+    inventory: [],
+    kitchenOrders: [],
+    restaurant: null,
+    branch: null,
+    appliedDiscount: null,
 
-  // ---------- تنسيق العملة ----------
-  formatCurrency(amount) {
-    return Number(amount).toFixed(2) + ' ج.م';
-  },
+    formatCurrency(amount) { return Number(amount).toFixed(2) + ' ج.م'; },
 
-  // ---------- الترجمة ----------
-  t(key) {
-    const dict = {
-      ar: {
-        dashboard: 'الرئيسية', pos: 'الكاشير', kitchen: 'المطبخ',
-        inventory: 'المخزون', reports: 'التقارير', discounts: 'الخصومات',
-        users: 'المستخدمين', settings: 'الإعدادات', qrmenu: 'قائمة QR',
-        login: 'تسجيل الدخول'
-      },
-      en: {
-        dashboard: 'Dashboard', pos: 'POS', kitchen: 'Kitchen',
-        inventory: 'Inventory', reports: 'Reports', discounts: 'Discounts',
-        users: 'Users', settings: 'Settings', qrmenu: 'QR Menu',
-        login: 'Login'
-      }
-    };
-    return (dict[this.language] && dict[this.language][key]) || key;
-  },
+    t(key) {
+        const dict = {
+            ar: { dashboard:'الرئيسية', pos:'الكاشير', kitchen:'المطبخ', inventory:'المخزون', reports:'التقارير', discounts:'الخصومات', users:'المستخدمين', settings:'الإعدادات', qrmenu:'قائمة QR', login:'تسجيل الدخول' },
+            en: { dashboard:'Dashboard', pos:'POS', kitchen:'Kitchen', inventory:'Inventory', reports:'Reports', discounts:'Discounts', users:'Users', settings:'Settings', qrmenu:'QR Menu', login:'Login' }
+        };
+        return (dict[this.language] && dict[this.language][key]) || key;
+    },
 
-  // ---------- تبديل اللغة ----------
-  toggleLanguage() {
-    this.language = this.language === 'ar' ? 'en' : 'ar';
-    document.documentElement.lang = this.language;
-    document.documentElement.dir = this.language === 'ar' ? 'rtl' : 'ltr';
-    document.getElementById('langLabel').textContent = this.language === 'ar' ? 'English' : 'العربية';
-    // تحديث النصوص في الشريط الجانبي
-    document.querySelectorAll('.nav-link span').forEach(span => {
-      const page = span.parentElement.dataset.page;
-      if (page) span.textContent = this.t(page);
-    });
-    // إعادة تحميل الصفحة الحالية باللغة الجديدة
-    const initFn = window[`init${this.currentPage.charAt(0).toUpperCase() + this.currentPage.slice(1)}`];
-    if (typeof initFn === 'function') initFn();
-    document.getElementById('headerTitle').textContent = this.t(this.currentPage);
-  },
+    toggleLanguage() {
+        this.language = this.language === 'ar' ? 'en' : 'ar';
+        document.documentElement.lang = this.language;
+        document.documentElement.dir = this.language === 'ar' ? 'rtl' : 'ltr';
+        document.getElementById('langLabel').textContent = this.language === 'ar' ? 'English' : 'العربية';
+        this.loadPage(this.currentPage);
+    },
 
-  // ---------- تبديل الشريط الجانبي ----------
-  toggleSidebar() {
-    const sidebar = document.getElementById('appSidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (!sidebar || !overlay) return;
-    if (window.innerWidth < 768) {
-      sidebar.classList.toggle('open');
-      overlay.classList.toggle('open');
-    } else {
-      sidebar.classList.toggle('hidden');
-    }
-  },
+    toggleSidebar() {
+        const sidebar = document.getElementById('appSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (!sidebar || !overlay) return;
+        if (window.innerWidth < 768) {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        } else {
+            sidebar.classList.toggle('hidden');
+        }
+    },
 
-  // ---------- تحميل الصفحات (مع محتوى احتياطي) ----------
-  async loadPage(pages) {
-    const container = document.getElementById('pageContainer');
-    if (!container) return;
+    async loadPage(page) {
+        const container = document.getElementById('pageContainer');
+        if (!container) return;
+        try {
+            const response = await fetch(`pages/${page}.html`);
+            if (!response.ok) throw new Error('ملف غير موجود');
+            const html = await response.text();
+            container.innerHTML = html;
+        } catch (err) {
+            container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p class="px-6 text-gray-500">محتوى الصفحة قيد التحميل...</p>`;
+        }
+        document.querySelectorAll('.nav-link').forEach(link => link.classList.toggle('active', link.dataset.page === page));
+        document.getElementById('headerTitle').textContent = this.t(page);
+        this.currentPage = page;
+        sessionStorage.setItem('lastPage', page);
+        const initFn = window[`init${page.charAt(0).toUpperCase() + page.slice(1)}`];
+        if (typeof initFn === 'function') initFn();
+    },
 
-    try {
-      const response = await fetch(`pages/${page}.html`);
-      if (!response.ok) throw new Error('ملف غير موجود');
-      const html = await response.text();
-      container.innerHTML = html;
-    } catch (err) {
-      // محتوى احتياطي يظهر اسم الصفحة بدلاً من الفراغ
-      container.innerHTML = `
-        <h2 class="text-2xl font-bold p-6">${this.t(page)}</h2>
-        <p class="px-6 text-gray-500">محتوى الصفحة قيد التحميل...</p>
-        <p class="px-6 text-xs text-gray-400">تأكد من وجود ملف pages/${page}.html</p>
-      `;
-      console.warn(`تعذر تحميل ${page}.html:`, err.message);
-    }
+    async checkSession() {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+            this.user = data.session.user;
+            await this.loadRestaurantData();
+            document.getElementById('appHeader').style.display = 'flex';
+            document.getElementById('appSidebar').style.display = 'flex';
+            this.loadPage(sessionStorage.getItem('lastPage') || 'dashboard');
+        } else {
+            document.getElementById('appHeader').style.display = 'none';
+            document.getElementById('appSidebar').style.display = 'none';
+            this.loadPage('login');
+        }
+    },
 
-    // تحديث التمييز في الشريط الجانبي
-    document.querySelectorAll('.nav-link').forEach(link => {
-      link.classList.toggle('active', link.dataset.page === page);
-    });
-    document.getElementById('headerTitle').textContent = this.t(page);
-    this.currentPage = page;
-    sessionStorage.setItem('lastPage', page);
+    async loadRestaurantData() {
+        if (!this.user) return;
+        const { data } = await supabase.from('user_restaurant_roles')
+            .select('restaurant_id, restaurants(*), branches(*), roles(name)')
+            .eq('user_id', this.user.id).single();
+        if (data) {
+            this.restaurant = data.restaurants;
+            this.branch = data.branches;
+            this.user.role = data.roles?.name || 'staff';
+            this.products = await window.Api.getProducts(data.restaurant_id);
+            this.inventory = await window.Api.getInventory(data.restaurant_id);
+        }
+    },
 
-    // استدعاء دالة التهيئة الخاصة بالصفحة إن وجدت
-    const initFn = window[`init${page.charAt(0).toUpperCase() + page.slice(1)}`];
-    if (typeof initFn === 'function') {
-      initFn();
-    }
-  },
-
-  // ---------- المصادقة والجلسات ----------
-  async checkSession() {
-    try {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        this.user = data.session.user;
-        this.session = data.session;
-        await this.loadRestaurantData();
-        this.showUI();
-        const lastPage = sessionStorage.getItem('lastPage') || 'dashboard';
-        this.loadPage(lastPage);
-      } else {
-        this.hideUI();
+    async logout() {
+        await supabase.auth.signOut();
+        this.user = null;
         this.loadPage('login');
-      }
-    } catch (e) {
-      console.error('فشل فحص الجلسة:', e);
-      this.hideUI();
-      this.loadPage('login');
+    },
+
+    async placeOrder() {
+        if (!this.cart.length) return;
+        const subtotal = this.cart.reduce((s, i) => s + i.price * i.qty, 0);
+        const total = Math.max(0, subtotal - (this.appliedDiscount?.value || 0));
+        const order = { restaurant_id: this.restaurant.id, branch_id: this.branch.id, type: 'dine_in', status: 'new', subtotal, total, source: 'pos' };
+        await window.Api.createOrder(order, this.cart.map(i => ({ product_id: i.id, name: i.name, price: i.price, quantity: i.qty })));
+        this.cart = [];
+        alert('تم الطلب بنجاح');
     }
-  },
-
-  async loadRestaurantData() {
-    if (!this.user) return;
-    try {
-      const { data } = await supabase
-        .from('user_restaurant_roles')
-        .select('restaurant_id, restaurants(*), branches(*), roles(name)')
-        .eq('user_id', this.user.id)
-        .single();
-      if (data) {
-        this.restaurant = data.restaurants;
-        this.branch = data.branches;
-        this.user.role = data.roles?.name || 'staff';
-      }
-    } catch (e) {
-      console.warn('بيانات المطعم غير متوفرة:', e.message);
-    }
-  },
-
-  showUI() {
-    document.getElementById('appHeader').style.display = 'flex';
-    document.getElementById('appSidebar').style.display = 'flex';
-  },
-
-  hideUI() {
-    document.getElementById('appHeader').style.display = 'none';
-    document.getElementById('appSidebar').style.display = 'none';
-  },
-
-  async logout() {
-    await supabase.auth.signOut();
-    this.user = null;
-    this.session = null;
-    this.hideUI();
-    this.loadPage('login');
-  },
-
-  // ---------- الكاشير (وظائف مساعدة) ----------
-  async placeOrder(method = 'cash') {
-    if (this.cart.length === 0) return;
-    const subtotal = this.cart.reduce((s, i) => s + i.price * i.qty, 0);
-    let discount = 0;
-    if (this.appliedDiscount) {
-      discount = this.appliedDiscount.type === 'percentage'
-        ? subtotal * (this.appliedDiscount.value / 100)
-        : this.appliedDiscount.value;
-    }
-    const total = Math.max(0, subtotal - discount);
-    const tax = total * (this.taxRate / 100);
-    const finalTotal = total + tax;
-
-    try {
-      const order = {
-        restaurant_id: this.restaurant?.id,
-        branch_id: this.branch?.id,
-        type: 'dine_in',
-        status: 'new',
-        subtotal,
-        tax_amount: tax,
-        discount_amount: discount,
-        total: finalTotal,
-        source: 'pos',
-        created_by: this.user?.id
-      };
-      const { data: newOrder, error } = await supabase.from('orders').insert(order).select().single();
-      if (error) throw error;
-      const items = this.cart.map(item => ({
-        order_id: newOrder.id,
-        product_id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.qty
-      }));
-      await supabase.from('order_items').insert(items);
-      this.kitchenOrders.unshift({
-        id: newOrder.id,
-        items: this.cart.map(i => `${i.name} ×${i.qty}`),
-        status: 'new',
-        time: new Date().toLocaleTimeString('ar-EG')
-      });
-      this.loyaltyPoints += Math.floor(finalTotal / 10);
-      alert(`تم الطلب #${newOrder.order_number}\nالإجمالي: ${this.formatCurrency(finalTotal)}`);
-    } catch (err) {
-      alert('فشل إنشاء الطلب: ' + err.message);
-    }
-    this.cart = [];
-    this.appliedDiscount = null;
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
-  }
 };
 
-// ============================================
-// بدء التطبيق
-// ============================================
-window.onload = () => {
-  App.checkSession();
-};
+window.onload = () => App.checkSession();
