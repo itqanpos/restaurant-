@@ -1,0 +1,207 @@
+<!-- =============================================
+     صفحة إدارة المستخدمين (Users & Roles)
+     يتم تحميلها داخل #pageContainer
+     ============================================= -->
+<div>
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold">إدارة المستخدمين</h2>
+    <button onclick="openUserModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
+      <i class="fas fa-user-plus"></i> إضافة مستخدم
+    </button>
+  </div>
+
+  <!-- جدول المستخدمين -->
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="p-3 text-right">المستخدم</th>
+          <th class="p-3">البريد الإلكتروني</th>
+          <th class="p-3">الدور</th>
+          <th class="p-3">الفرع</th>
+          <th class="p-3">الحالة</th>
+          <th class="p-3">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="usersTableBody">
+        <tr><td colspan="6" class="text-center py-8 text-gray-400">جاري التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- نافذة إضافة / تعديل مستخدم -->
+  <div id="userModal" class="modal hidden">
+    <div class="modal-content">
+      <h3 class="text-lg font-bold mb-4" id="userModalTitle">إضافة مستخدم جديد</h3>
+      <form onsubmit="saveUser(event)">
+        <input type="hidden" id="userId">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm mb-1">الاسم الكامل</label>
+            <input type="text" id="userFullName" required class="w-full border rounded-lg p-2">
+          </div>
+          <div>
+            <label class="block text-sm mb-1">البريد الإلكتروني</label>
+            <input type="email" id="userEmail" required class="w-full border rounded-lg p-2">
+          </div>
+          <div>
+            <label class="block text-sm mb-1">كلمة المرور</label>
+            <input type="password" id="userPassword" class="w-full border rounded-lg p-2" placeholder="اتركه فارغاً إذا لم ترغب في تغييره">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm mb-1">الدور</label>
+              <select id="userRole" class="w-full border rounded-lg p-2">
+                <option value="admin">مدير النظام</option>
+                <option value="manager">مدير مطعم</option>
+                <option value="cashier">كاشير</option>
+                <option value="kitchen">مطبخ</option>
+                <option value="waiter">نادل</option>
+                <option value="viewer">مشاهدة</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm mb-1">الفرع</label>
+              <select id="userBranch" class="w-full border rounded-lg p-2">
+                <option value="">كل الفروع</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-6 justify-end">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-gray-200 rounded-lg text-sm">إلغاء</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.initUsers = async function() {
+    await loadBranches();
+    await loadUsers();
+  };
+
+  async function loadBranches() {
+    const select = document.getElementById('userBranch');
+    if (!select || !window.App || !App.restaurant) return;
+
+    const { data } = await supabase
+      .from('branches')
+      .select('id, name')
+      .eq('restaurant_id', App.restaurant.id);
+
+    select.innerHTML = '<option value="">كل الفروع</option>';
+    if (data) {
+      data.forEach(b => {
+        select.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+      });
+    }
+  }
+
+  async function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody || !window.App || !App.restaurant) return;
+
+    const { data, error } = await supabase
+      .from('user_restaurant_roles')
+      .select('id, user_id, branch_id, users(full_name, email), roles(name), branches(name)')
+      .eq('restaurant_id', App.restaurant.id);
+
+    if (error || !data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-400">لا يوجد مستخدمون بعد</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(row => `
+      <tr class="border-t hover:bg-gray-50">
+        <td class="p-3 font-medium">${row.users?.full_name || '—'}</td>
+        <td class="p-3 text-gray-600">${row.users?.email || '—'}</td>
+        <td class="p-3">
+          <span class="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+            ${row.roles?.name || '—'}
+          </span>
+        </td>
+        <td class="p-3 text-sm">${row.branches?.name || 'الكل'}</td>
+        <td class="p-3">
+          <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">نشط</span>
+        </td>
+        <td class="p-3">
+          <button onclick="editUser('${row.id}')" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button>
+          <button onclick="deleteUser('${row.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  window.openUserModal = function(id = null) {
+    document.getElementById('userModal').classList.remove('hidden');
+    document.getElementById('userModalTitle').textContent = id ? 'تعديل المستخدم' : 'إضافة مستخدم جديد';
+    document.getElementById('userId').value = id || '';
+    if (!id) {
+      document.getElementById('userFullName').value = '';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('userPassword').value = '';
+    }
+  };
+
+  window.closeUserModal = function() {
+    document.getElementById('userModal').classList.add('hidden');
+  };
+
+  window.saveUser = async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('userId').value;
+    const fullName = document.getElementById('userFullName').value.trim();
+    const email = document.getElementById('userEmail').value.trim();
+    const password = document.getElementById('userPassword').value;
+    const role = document.getElementById('userRole').value;
+    const branchId = document.getElementById('userBranch').value || null;
+
+    if (!fullName || !email) return alert('الاسم والبريد مطلوبان');
+
+    // 1. إنشاء أو تحديث المستخدم في Auth
+    let userId = id;
+    if (!id) {
+      // إنشاء مستخدم جديد
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: password || 'default123',
+        options: { data: { full_name: fullName } }
+      });
+      if (authError) return alert(authError.message);
+      userId = authData.user.id;
+    } else {
+      // تحديث المستخدم (يمكن لاحقاً)
+    }
+
+    // 2. ربط المستخدم بالمطعم والدور
+    const { error: roleError } = await supabase
+      .from('user_restaurant_roles')
+      .upsert({
+        user_id: userId,
+        restaurant_id: App.restaurant.id,
+        branch_id: branchId,
+        role_id: role // يجب أن يكون UUID في الجدول الحقيقي
+      });
+
+    if (roleError) return alert(roleError.message);
+
+    closeUserModal();
+    loadUsers();
+    alert('تم حفظ المستخدم بنجاح');
+  };
+
+  window.deleteUser = async function(id) {
+    if (!confirm('هل أنت متأكد من إزالة هذا المستخدم؟')) return;
+    await supabase.from('user_restaurant_roles').delete().eq('id', id);
+    loadUsers();
+  };
+
+  window.editUser = function(id) {
+    openUserModal(id);
+  };
+
+  if (window.App && App.currentPage === 'users') window.initUsers();
+</script>
