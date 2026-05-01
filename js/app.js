@@ -1,10 +1,11 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// التطبيق الرئيسي (النسخة الكاملة)
+// التطبيق الرئيسي (مع finishLogin)
 // =============================================
 
 const App = {
   user: null,
+  session: null,
   currentPage: 'dashboard',
   language: 'ar',
   currency: 'EGP',
@@ -73,18 +74,26 @@ const App = {
     }
   },
 
+  // ---------- إنهاء تسجيل الدخول بدون إعادة تحميل ----------
+  async finishLogin(user, session) {
+    this.user = user;
+    this.session = session;
+    await this.loadRestaurantData();
+    this.showUI();
+    this.loadPage('dashboard');
+  },
+
   // ---------- الجلسة والمصادقة ----------
   async checkSession() {
     const { data } = await window.supabase.auth.getSession();
     if (data.session) {
       this.user = data.session.user;
+      this.session = data.session;
       await this.loadRestaurantData();
-      document.getElementById('appHeader').style.display = 'flex';
-      document.getElementById('appSidebar').style.display = 'flex';
+      this.showUI();
       this.loadPage(sessionStorage.getItem('lastPage') || 'dashboard');
     } else {
-      document.getElementById('appHeader').style.display = 'none';
-      document.getElementById('appSidebar').style.display = 'none';
+      this.hideUI();
       this.loadPage('login');
     }
   },
@@ -117,6 +126,7 @@ const App = {
   async logout() {
     await window.supabase.auth.signOut();
     this.user = null;
+    this.session = null;
     this.cart = [];
     this.appliedDiscount = null;
     this.loadPage('login');
