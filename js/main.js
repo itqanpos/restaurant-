@@ -1,50 +1,55 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// نقطة الدخول الرئيسية
+// نقطة البداية - مُعدلة
 // =============================================
 
-// استيراد التبعيات الأساسية
-import { initApp } from './app.js';
-import { supabase, initSupabase } from './core/supabase.js';
-import { appState } from './core/state.js';
+import './core/supabase.js'; // ينشئ window.supabase
 import { router } from './core/router.js';
+import { appState } from './core/state.js';
 import { loadLayout } from './shared/layout.js';
 
-// تهيئة Supabase ثم بدء التطبيق
 async function bootstrap() {
-  try {
-    // تهيئة اتصال Supabase
-    initSupabase();
+  // انتظر تحميل الـ DOM بالكامل
+  if (document.readyState === 'loading') {
+    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+  }
 
-    // محاولة استعادة جلسة المستخدم
-    const { data: { session } } = await supabase.auth.getSession();
+  if (!window.supabase) {
+    console.error('❌ Supabase غير متاح');
+    document.getElementById('pageContainer').innerHTML =
+      '<p class="text-red-500 p-6">خطأ: لم يتم تحميل Supabase. تأكد من إعداد المفاتيح في core/supabase.js</p>';
+    return;
+  }
+
+  try {
+    // استعادة الجلسة المخزنة
+    const { data: { session } } = await window.supabase.auth.getSession();
     if (session?.user) {
       appState.set('user', session.user);
       appState.set('session', session);
     }
 
-    // مراقبة تغييرات المصادقة
-    supabase.auth.onAuthStateChange((_event, session) => {
+    // مراقبة تغيرات المصادقة
+    window.supabase.auth.onAuthStateChange((_event, session) => {
       appState.set('user', session?.user || null);
       appState.set('session', session);
     });
 
-    // بناء واجهة التطبيق الثابتة (هيدر، شريط جانبي)
+    // بناء الواجهة (هيدر + شريط جانبي)
     loadLayout();
 
-    // تهيئة المسارات
+    // تعريف المسارات
     initRouter();
 
     // تحميل الصفحة الحالية
     router.resolve();
   } catch (error) {
-    console.error('فشل تشغيل التطبيق:', error);
-    document.getElementById('pageContainer').innerHTML = 
-      '<p class="text-red-500">خطأ في تحميل التطبيق. تأكد من مفاتيح Supabase.</p>';
+    console.error('فشل بدء التطبيق:', error);
+    document.getElementById('pageContainer').innerHTML =
+      `<p class="text-red-500 p-6">خطأ: ${error.message}</p>`;
   }
 }
 
-// تعريف المسارات
 function initRouter() {
   router.addRoute('login', () => import('./pages/login.js').then(m => m.renderLoginPage()));
   router.addRoute('dashboard', () => import('./pages/dashboard.js').then(m => m.renderDashboardPage()));
@@ -56,5 +61,4 @@ function initRouter() {
   router.addRoute('qrmenu', () => import('./pages/qrmenu.js').then(m => m.renderQRMenuPage()));
 }
 
-// بدء التطبيق
 bootstrap();
