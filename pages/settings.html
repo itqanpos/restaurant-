@@ -1,0 +1,237 @@
+<!-- =============================================
+     صفحة الإعدادات (Settings)
+     يتم تحميلها داخل #pageContent
+     ============================================= -->
+<div>
+  <h2 class="text-2xl font-bold mb-6">الإعدادات</h2>
+
+  <!-- معلومات المطعم -->
+  <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+    <h3 class="font-bold text-lg mb-4">معلومات المطعم</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">اسم المطعم</label>
+        <input type="text" id="restName" class="w-full border rounded-lg p-2" value="مطعم العائلة">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+        <input type="email" id="restEmail" class="w-full border rounded-lg p-2" value="info@family.com">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+        <input type="text" id="restPhone" class="w-full border rounded-lg p-2" value="+20 100 000 0000">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
+        <input type="text" id="restAddress" class="w-full border rounded-lg p-2" value="القاهرة، مصر">
+      </div>
+    </div>
+    <button onclick="saveRestaurantInfo()" class="mt-4 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+      <i class="fas fa-save"></i> حفظ
+    </button>
+  </div>
+
+  <!-- الإعدادات العامة -->
+  <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+    <h3 class="font-bold text-lg mb-4">الإعدادات العامة</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">اللغة</label>
+        <select id="langSelect" class="w-full border rounded-lg p-2" onchange="updateLanguage()">
+          <option value="ar">العربية</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">العملة</label>
+        <select id="currencySelect" class="w-full border rounded-lg p-2" onchange="updateCurrency()">
+          <option value="EGP">جنيه مصري (ج.م)</option>
+          <option value="SAR">ريال سعودي (﷼)</option>
+          <option value="USD">دولار ($)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">نسبة الضريبة %</label>
+        <input type="number" id="taxRate" class="w-full border rounded-lg p-2" value="14" min="0" max="100">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">باقة الاشتراك</label>
+        <select id="planSelect" class="w-full border rounded-lg p-2" disabled>
+          <option>Pro</option>
+          <option>Enterprise</option>
+        </select>
+        <p class="text-xs text-gray-500 mt-1">الترقية من الموقع الرئيسي</p>
+      </div>
+    </div>
+    <button onclick="saveGeneralSettings()" class="mt-4 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+      <i class="fas fa-save"></i> حفظ الإعدادات
+    </button>
+  </div>
+
+  <!-- إدارة الفروع -->
+  <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-bold text-lg">الفروع</h3>
+      <button onclick="openBranchModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition">
+        <i class="fas fa-plus"></i> إضافة فرع
+      </button>
+    </div>
+    <div id="branchesList" class="space-y-3">
+      <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+        <div>
+          <p class="font-medium">الفرع الرئيسي - القاهرة</p>
+          <p class="text-xs text-gray-500">شارع المعز، وسط البلد</p>
+        </div>
+        <div class="flex gap-2">
+          <button class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
+          <button class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+        <div>
+          <p class="font-medium">فرع الجيزة</p>
+          <p class="text-xs text-gray-500">شارع الهرم</p>
+        </div>
+        <div class="flex gap-2">
+          <button class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
+          <button class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- منطقة الخطر -->
+  <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+    <h3 class="font-bold text-lg text-red-800 mb-2">منطقة الخطر</h3>
+    <p class="text-sm text-red-600 mb-4">هذه الإجراءات لا يمكن التراجع عنها</p>
+    <button onclick="deleteRestaurant()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+      <i class="fas fa-trash"></i> حذف المطعم
+    </button>
+  </div>
+
+  <!-- نافذة إضافة فرع -->
+  <div id="branchModal" class="modal hidden">
+    <div class="modal-content">
+      <h3 class="text-lg font-bold mb-4">إضافة فرع جديد</h3>
+      <form onsubmit="addBranch(event)">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm mb-1">اسم الفرع</label>
+            <input type="text" id="branchName" required class="w-full border rounded-lg p-2">
+          </div>
+          <div>
+            <label class="block text-sm mb-1">العنوان</label>
+            <input type="text" id="branchAddress" required class="w-full border rounded-lg p-2">
+          </div>
+          <div>
+            <label class="block text-sm mb-1">رقم الهاتف</label>
+            <input type="text" id="branchPhone" class="w-full border rounded-lg p-2">
+          </div>
+        </div>
+        <div class="flex gap-2 mt-6 justify-end">
+          <button type="button" onclick="closeBranchModal()" class="px-4 py-2 bg-gray-200 rounded-lg text-sm">إلغاء</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">إضافة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // دالة التهيئة
+  window.initSettings = function() {
+    // ضبط القيم الحالية
+    if (window.App) {
+      document.getElementById('langSelect').value = App.language || 'ar';
+      document.getElementById('currencySelect').value = App.currency || 'EGP';
+    }
+  };
+
+  window.saveRestaurantInfo = function() {
+    const name = document.getElementById('restName').value;
+    const email = document.getElementById('restEmail').value;
+    const phone = document.getElementById('restPhone').value;
+    const address = document.getElementById('restAddress').value;
+    
+    if (!name) {
+      alert('اسم المطعم مطلوب');
+      return;
+    }
+    
+    alert('تم حفظ معلومات المطعم بنجاح');
+    console.log('معلومات المطعم:', { name, email, phone, address });
+  };
+
+  window.updateLanguage = function() {
+    const lang = document.getElementById('langSelect').value;
+    if (window.App) App.language = lang;
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    if (typeof toggleLanguage === 'function') toggleLanguage();
+  };
+
+  window.updateCurrency = function() {
+    const currency = document.getElementById('currencySelect').value;
+    if (window.App) App.currency = currency;
+  };
+
+  window.saveGeneralSettings = function() {
+    const lang = document.getElementById('langSelect').value;
+    const currency = document.getElementById('currencySelect').value;
+    const taxRate = document.getElementById('taxRate').value;
+    
+    if (window.App) {
+      App.language = lang;
+      App.currency = currency;
+    }
+    
+    alert('تم حفظ الإعدادات بنجاح');
+    console.log('الإعدادات العامة:', { lang, currency, taxRate });
+    updateLanguage();
+  };
+
+  window.openBranchModal = function() {
+    document.getElementById('branchModal').classList.remove('hidden');
+  };
+
+  window.closeBranchModal = function() {
+    document.getElementById('branchModal').classList.add('hidden');
+  };
+
+  window.addBranch = function(event) {
+    event.preventDefault();
+    const name = document.getElementById('branchName').value;
+    const address = document.getElementById('branchAddress').value;
+    const phone = document.getElementById('branchPhone').value;
+    
+    alert(`تم إضافة فرع "${name}" بنجاح`);
+    closeBranchModal();
+    
+    // إضافة الفرع للقائمة (محاكاة)
+    const list = document.getElementById('branchesList');
+    const div = document.createElement('div');
+    div.className = 'flex justify-between items-center p-3 bg-gray-50 rounded-lg';
+    div.innerHTML = `
+      <div>
+        <p class="font-medium">${name}</p>
+        <p class="text-xs text-gray-500">${address}</p>
+      </div>
+      <div class="flex gap-2">
+        <button class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
+        <button class="text-red-500 hover:text-red-700" onclick="this.closest('.flex').remove()"><i class="fas fa-trash"></i></button>
+      </div>
+    `;
+    list.appendChild(div);
+  };
+
+  window.deleteRestaurant = function() {
+    if (confirm('هل أنت متأكد من حذف المطعم بالكامل؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+      alert('تم حذف المطعم (محاكاة)');
+    }
+  };
+
+  // تشغيل أولي
+  if (typeof window.App !== 'undefined' && App.currentPage === 'settings') {
+    window.initSettings();
+  }
+</script>
