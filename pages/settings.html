@@ -67,7 +67,17 @@
       <i class="fas fa-save"></i> حفظ الإعدادات
     </button>
   </div>
-
+<!-- إدارة المحطات (Stations) -->
+<div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+  <div class="flex justify-between items-center mb-4">
+    <h3 class="font-bold text-lg">محطات المطبخ والطابعات</h3>
+    <button onclick="addStation()" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm">
+      <i class="fas fa-plus"></i> إضافة محطة
+    </button>
+  </div>
+  <p class="text-sm text-gray-500 mb-4">حدد اسم المحطة (مثلاً: مطبخ ساخن، بار) ثم اختر التصنيفات التي تخصها. سيتم إرسال الطلبات لهذه المحطة فقط.</p>
+  <div id="stationsList" class="space-y-3"></div>
+</div>
   <!-- إدارة الفروع -->
   <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
     <div class="flex justify-between items-center mb-4">
