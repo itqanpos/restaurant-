@@ -6,12 +6,8 @@
 const SUPABASE_URL = 'https://xisosjmybqmuzveffhdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM';
 
-// إنشاء العميل أو استخدام الموجود
-const supabaseClient = window.supabase?.createClient
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-  : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// تعميم العميل لجميع النوافذ
+// إنشاء عميل Supabase وتخزينه في النطاق العام
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 window.supabase = supabaseClient;
 
 // ============================================
@@ -150,12 +146,7 @@ window.Api = {
     return data;
   },
 
-  async applyDiscountUsage(discountId) {
-    const { error } = await supabaseClient.rpc('increment_discount_usage', { discount_id: discountId });
-    if (error) throw error;
-  },
-
-  // ---------- المستخدمين والأدوار ----------
+  // ---------- المستخدمين ----------
   async getUsers(restaurantId) {
     const { data, error } = await supabaseClient
       .from('user_restaurant_roles')
@@ -197,7 +188,7 @@ window.Api = {
     return data;
   },
 
-  // ---------- الاشتراكات اللحظية (Realtime) ----------
+  // ---------- الوقت الحقيقي ----------
   subscribeToNewOrders(branchId, callback) {
     return supabaseClient
       .channel('new-orders')
@@ -207,35 +198,17 @@ window.Api = {
         payload => callback(payload.new)
       )
       .subscribe();
-  },
-
-  subscribeToOrderUpdates(orderId, callback) {
-    return supabaseClient
-      .channel(`order-${orderId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
-        payload => callback(payload.new)
-      )
-      .subscribe();
   }
 };
 
-// دالة مساعدة لحساب تاريخ البداية
 function getPeriodStartDate(period) {
   const now = new Date();
   switch (period) {
-    case 'today':
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    case 'week':
-      return new Date(now.setDate(now.getDate() - 7)).toISOString();
-    case 'month':
-      return new Date(now.setMonth(now.getMonth() - 1)).toISOString();
-    case 'year':
-      return new Date(now.setFullYear(now.getFullYear() - 1)).toISOString();
-    default:
-      return new Date(now.setDate(now.getDate() - 7)).toISOString();
+    case 'today': return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    case 'week': return new Date(now.setDate(now.getDate() - 7)).toISOString();
+    case 'month': return new Date(now.setMonth(now.getMonth() - 1)).toISOString();
+    default: return new Date(now.setDate(now.getDate() - 7)).toISOString();
   }
 }
 
-console.log('✅ api.js تم تحميله – window.Api جاهز');
+console.log('✅ api.js جاهز – window.Api متاح');
