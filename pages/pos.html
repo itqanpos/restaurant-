@@ -1,26 +1,57 @@
 <div class="flex h-full -m-6">
-  <!-- جهة المنتجات -->
-  <div class="flex-1 p-6">
-    <div class="flex gap-2 mb-4">
-      <select id="orderType" class="border rounded-lg p-2 text-sm">
+  <!-- منطقة المنتجات (اليسار) -->
+  <div class="flex-1 flex flex-col p-6">
+    <!-- الصف الأول: الإعدادات والبحث -->
+    <div class="flex flex-wrap gap-2 mb-4">
+      <select id="posOrderType" class="border rounded-lg p-2 text-sm">
         <option value="dine_in">داخل المطعم</option>
         <option value="takeaway">تيك أواي</option>
         <option value="delivery">دليفري</option>
       </select>
-      <input type="text" id="tableNo" placeholder="رقم الطاولة" class="border rounded-lg p-2 w-24 text-sm">
+      <input type="text" id="posTable" placeholder="رقم الطاولة" class="border rounded-lg p-2 w-24 text-sm">
+      <input type="text" id="posCustomer" placeholder="اسم العميل" class="border rounded-lg p-2 flex-1 min-w-[150px] text-sm">
+      <input type="text" id="posSearch" placeholder="بحث عن منتج..." class="border rounded-lg p-2 w-40 text-sm">
     </div>
-    <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto" style="max-height: calc(100vh - 200px);"></div>
+
+    <!-- صف التصنيفات -->
+    <div id="categoryFilters" class="flex gap-2 mb-4 flex-wrap"></div>
+
+    <!-- شبكة المنتجات -->
+    <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
   </div>
 
-  <!-- سلة المشتريات -->
-  <div class="w-96 bg-white border-r flex flex-col">
-    <div class="p-4 border-b font-bold text-lg">الطلب الحالي</div>
-    <div id="cartContainer" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+  <!-- سلة المشتريات (اليمين) -->
+  <div class="w-96 bg-white border-r flex flex-col shadow-lg">
+    <div class="p-4 border-b font-bold text-lg flex justify-between">
+      <span>الطلب الحالي</span>
+      <button onclick="App.clearCart()" class="text-red-500 text-sm"><i class="fas fa-trash"></i></button>
+    </div>
+
+    <!-- عناصر السلة -->
+    <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+    <!-- كود الخصم -->
+    <div class="px-4 py-2 border-t flex gap-2">
+      <input type="text" id="discountCode" placeholder="كود الخصم" class="flex-1 border rounded-lg p-2 text-sm">
+      <button id="applyDiscountBtn" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">تطبيق</button>
+    </div>
+
+    <!-- ملخص المبالغ -->
+    <div class="p-4 border-t bg-gray-50 space-y-2 text-sm">
+      <div class="flex justify-between"><span>المجموع الفرعي</span><span id="posSubtotal">0.00 ج.م</span></div>
+      <div class="flex justify-between text-red-500" id="discountRow" style="display:none"><span>الخصم</span><span id="posDiscount">0.00 ج.م</span></div>
+      <div class="flex justify-between"><span>الضريبة (14%)</span><span id="posTax">0.00 ج.م</span></div>
+      <div class="flex justify-between font-bold text-lg border-t pt-2"><span>الإجمالي</span><span id="posTotal">0.00 ج.م</span></div>
+    </div>
+
+    <!-- أزرار الدفع والإجراءات -->
     <div class="p-4 border-t bg-gray-50 space-y-2">
-      <div class="flex justify-between"><span>المجموع</span><span id="posSubtotal">0.00</span></div>
-      <div class="flex justify-between"><span>الضريبة</span><span id="posTax">0.00</span></div>
-      <div class="flex justify-between font-bold text-lg"><span>الإجمالي</span><span id="posTotal">0.00</span></div>
-      <button id="placeOrderBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mt-2">إتمام الطلب</button>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="pay-btn bg-green-600 text-white p-2 rounded-lg" data-method="cash">نقداً</button>
+        <button class="pay-btn bg-blue-600 text-white p-2 rounded-lg" data-method="visa">فيزا</button>
+        <button class="pay-btn bg-purple-600 text-white p-2 rounded-lg" data-method="wallet">محفظة</button>
+      </div>
+      <button id="splitBillBtn" class="w-full bg-gray-200 py-2 rounded-lg text-sm">تقسيم الفاتورة</button>
     </div>
   </div>
 </div>
