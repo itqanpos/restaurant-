@@ -1,0 +1,134 @@
+<!-- =============================================
+     صفحة التقارير (Reports)
+     يتم تحميلها داخل #pageContent
+     ============================================= -->
+<div>
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold">التقارير</h2>
+    <button onclick="exportReport()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition">
+      <i class="fas fa-download"></i> تصدير
+    </button>
+  </div>
+
+  <!-- بطاقات إحصائية -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <p class="text-gray-500 text-sm">إجمالي المبيعات</p>
+      <h3 class="text-2xl font-bold text-green-600">12,500 ج.م</h3>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <p class="text-gray-500 text-sm">عدد الطلبات</p>
+      <h3 class="text-2xl font-bold text-blue-600">340</h3>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <p class="text-gray-500 text-sm">متوسط الطلب</p>
+      <h3 class="text-2xl font-bold text-purple-600">36.7 ج.م</h3>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <p class="text-gray-500 text-sm">الضريبة المحصلة</p>
+      <h3 class="text-2xl font-bold text-orange-600">1,750 ج.م</h3>
+    </div>
+  </div>
+
+  <!-- رسوم بيانية -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- رسم المبيعات -->
+    <div class="bg-white p-5 rounded-xl shadow-sm">
+      <h3 class="font-bold text-lg mb-4">مبيعات آخر 7 أيام</h3>
+      <canvas id="weeklySalesChart" height="200"></canvas>
+    </div>
+
+    <!-- المنتجات الأكثر مبيعاً -->
+    <div class="bg-white p-5 rounded-xl shadow-sm">
+      <h3 class="font-bold text-lg mb-4">المنتجات الأكثر مبيعاً</h3>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between py-2 border-b">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">1</span>
+            <div>
+              <p class="font-medium">برجر دجاج</p>
+              <p class="text-xs text-gray-500">145 طلب</p>
+            </div>
+          </div>
+          <span class="font-bold text-green-600">9,425 ج.م</span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">2</span>
+            <div>
+              <p class="font-medium">برجر لحم</p>
+              <p class="text-xs text-gray-500">120 طلب</p>
+            </div>
+          </div>
+          <span class="font-bold text-green-600">9,000 ج.م</span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">3</span>
+            <div>
+              <p class="font-medium">كولا</p>
+              <p class="text-xs text-gray-500">200 طلب</p>
+            </div>
+          </div>
+          <span class="font-bold text-green-600">3,000 ج.م</span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-bold">4</span>
+            <div>
+              <p class="font-medium">بطاطس مقلية</p>
+              <p class="text-xs text-gray-500">180 طلب</p>
+            </div>
+          </div>
+          <span class="font-bold text-green-600">4,500 ج.م</span>
+        </div>
+        <div class="flex items-center justify-between py-2">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-bold">5</span>
+            <div>
+              <p class="font-medium">عصير برتقال</p>
+              <p class="text-xs text-gray-500">95 طلب</p>
+            </div>
+          </div>
+          <span class="font-bold text-green-600">1,900 ج.م</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // دالة التهيئة
+  window.initReports = function() {
+    const ctx = document.getElementById('weeklySalesChart');
+    if (ctx && window.Chart) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
+          datasets: [{
+            label: 'مبيعات (ج.م)',
+            data: [1800, 2200, 1900, 2400, 2100, 2600, 1500],
+            backgroundColor: 'rgba(99, 102, 241, 0.7)',
+            borderColor: '#6366f1',
+            borderWidth: 1,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+  };
+
+  window.exportReport = function() {
+    alert('تم تصدير التقرير بنجاح (محاكاة)');
+  };
+
+  // تشغيل أولي
+  if (typeof window.App !== 'undefined' && App.currentPage === 'reports') {
+    window.initReports();
+  }
+</script>
