@@ -4,23 +4,43 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>نظام المطاعم - Restaurant SaaS</title>
+  
   <!-- Tailwind + أيقونات + خط -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  
   <style>
+    /* إعدادات الخطوط الأساسية */
     body { font-family: 'Tajawal', sans-serif; }
-    .page-content { display: none; }
-    .page-content.active { display: block; }
-    .nav-link { cursor: pointer; border-radius: 12px; padding: 12px 16px; transition: 0.2s; display: flex; align-items: center; gap: 12px; }
+    
+    /* روابط الشريط الجانبي */
+    .nav-link { 
+      cursor: pointer; border-radius: 12px; padding: 12px 16px; 
+      transition: 0.2s; display: flex; align-items: center; gap: 12px; 
+    }
     .nav-link:hover { background: #4338ca; color: white; }
     .nav-link.active { background: #3730a3; color: white; font-weight: 600; }
+    
+    /* تأثيرات اللمس */
     .product-card:active { transform: scale(0.96); background: #eef2ff; }
-    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d1d5db; background: white; cursor: pointer; }
+    .qty-btn { 
+      width: 28px; height: 28px; border-radius: 50%; 
+      border: 1px solid #d1d5db; background: white; cursor: pointer; 
+    }
     .qty-btn:active { background: #6366f1; color: white; }
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
-    .modal-content { background: white; border-radius: 20px; padding: 24px; width: 90%; max-width: 500px; }
-    /* للشاشات الصغيرة: الشريط الجانبي يكون مخفيًا ويظهر كطبقة */
+    
+    /* النوافذ المنبثقة */
+    .modal { 
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
+      display: flex; align-items: center; justify-content: center; z-index: 50; 
+    }
+    .modal-content { 
+      background: white; border-radius: 20px; padding: 24px; 
+      width: 90%; max-width: 500px; 
+    }
+    
+    /* تحسينات الشريط الجانبي للجوال */
     @media (max-width: 767px) {
       #sidebar {
         position: fixed; top: 0; right: 0; height: 100%; z-index: 45;
@@ -31,7 +51,10 @@
         transform: translateX(0);
       }
       .sidebar-overlay { display: none; }
-      .sidebar-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40; }
+      .sidebar-overlay.open { 
+        display: block; position: fixed; inset: 0; 
+        background: rgba(0,0,0,0.4); z-index: 40; 
+      }
     }
   </style>
 </head>
@@ -83,8 +106,10 @@
   <!-- نافذة منبثقة عامة -->
   <div id="modalContainer"></div>
 
+  <!-- المكتبات الأساسية -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- التطبيق الرئيسي -->
   <script src="js/app.js"></script>
 </body>
 </html>
