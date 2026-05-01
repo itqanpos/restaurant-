@@ -1,195 +1,29 @@
-<!-- =============================================
-     صفحة إدارة الخصومات والعروض (Discounts)
-     يتم تحميلها داخل #pageContainer
-     ============================================= -->
 <div>
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold">الخصومات والعروض</h2>
-    <button onclick="openDiscountModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
-      <i class="fas fa-plus"></i> إضافة خصم
-    </button>
-  </div>
-
-  <!-- جدول الخصومات -->
-  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-    <table class="w-full text-sm">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="p-3 text-right">الكود</th>
-          <th class="p-3">النوع</th>
-          <th class="p-3">القيمة</th>
-          <th class="p-3">الاستخدامات</th>
-          <th class="p-3">الصالحية</th>
-          <th class="p-3">الحالة</th>
-          <th class="p-3">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody id="discountsTableBody">
-        <!-- تُملأ ديناميكياً -->
-      </tbody>
-    </table>
-  </div>
-
-  <!-- نافذة إضافة/تعديل خصم -->
-  <div id="discountModal" class="modal hidden">
-    <div class="modal-content">
-      <h3 class="text-lg font-bold mb-4" id="discountModalTitle">إضافة خصم جديد</h3>
-      <form onsubmit="saveDiscount(event)">
-        <input type="hidden" id="discountId">
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm mb-1">كود الخصم</label>
-            <input type="text" id="discountCode" class="w-full border rounded-lg p-2" placeholder="مثلاً: RAMADAN20">
-          </div>
-          <div>
-            <label class="block text-sm mb-1">النوع</label>
-            <select id="discountType" class="w-full border rounded-lg p-2">
-              <option value="percentage">نسبة مئوية (%)</option>
-              <option value="fixed">مبلغ ثابت (ج.م)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm mb-1">القيمة</label>
-            <input type="number" id="discountValue" class="w-full border rounded-lg p-2" placeholder="20" required>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-sm mb-1">تاريخ البداية</label>
-              <input type="date" id="discountStart" class="w-full border rounded-lg p-2">
-            </div>
-            <div>
-              <label class="block text-sm mb-1">تاريخ النهاية</label>
-              <input type="date" id="discountEnd" class="w-full border rounded-lg p-2">
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm mb-1">الحد الأدنى للطلب (ج.م)</label>
-            <input type="number" id="minOrder" class="w-full border rounded-lg p-2" value="0">
-          </div>
-          <div>
-            <label class="block text-sm mb-1">الحد الأقصى للاستخدامات (0 = غير محدود)</label>
-            <input type="number" id="maxUses" class="w-full border rounded-lg p-2" value="0">
-          </div>
-        </div>
-        <div class="flex gap-2 mt-6 justify-end">
-          <button type="button" onclick="closeDiscountModal()" class="px-4 py-2 bg-gray-200 rounded-lg text-sm">إلغاء</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">حفظ</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  <h2 class="text-2xl font-bold mb-6">الخصومات والعروض</h2>
+  <div id="discountsList"></div>
+  <button onclick="addDiscount()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg mt-4">إضافة خصم</button>
 </div>
-
 <script>
-  // تحميل الخصومات من Supabase
-  window.initDiscounts = async function() {
-    await loadDiscounts();
-  };
-
+  window.initDiscounts = function() { loadDiscounts(); };
   async function loadDiscounts() {
-    const tbody = document.getElementById('discountsTableBody');
-    if (!tbody) return;
-
-    // محاولة جلب الخصومات من Supabase
-    let discounts = [];
-    if (window.App && App.restaurant) {
-      const { data, error } = await supabase
-        .from('discounts')
-        .select('*')
-        .eq('restaurant_id', App.restaurant.id)
-        .order('created_at', { ascending: false });
-      if (!error) discounts = data;
-    }
-
-    if (discounts.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">لا توجد خصومات</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = discounts.map(d => `
-      <tr class="border-t hover:bg-gray-50">
-        <td class="p-3 font-mono font-bold">${d.code || '-'}</td>
-        <td class="p-3">${d.type === 'percentage' ? 'نسبة %' : 'مبلغ ثابت'}</td>
-        <td class="p-3">${d.value}${d.type === 'percentage' ? '%' : ' ج.م'}</td>
-        <td class="p-3">${d.current_uses || 0} / ${d.max_uses || '∞'}</td>
-        <td class="p-3 text-xs">${d.valid_from ? new Date(d.valid_from).toLocaleDateString('ar-EG') : '-'} → ${d.valid_until ? new Date(d.valid_until).toLocaleDateString('ar-EG') : '-'}</td>
-        <td class="p-3">
-          <span class="px-2 py-1 rounded-full text-xs font-medium ${d.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-            ${d.is_active ? 'نشط' : 'غير نشط'}
-          </span>
-        </td>
-        <td class="p-3">
-          <button onclick="editDiscount('${d.id}')" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button>
-          <button onclick="deleteDiscount('${d.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>
-        </td>
-      </tr>
-    `).join('');
+    const container = document.getElementById('discountsList');
+    try {
+      const discounts = await window.Api.getDiscounts(App.restaurant.id);
+      container.innerHTML = discounts.map(d => `
+        <div class="bg-white p-3 rounded-lg shadow mb-2 flex justify-between items-center">
+          <div><span class="font-bold">${d.code || 'بدون كود'}</span><span class="text-sm text-gray-500"> - ${d.type === 'percentage' ? d.value + '%' : d.value + ' ج.م'}</span></div>
+          <div><button onclick="deleteDiscount('${d.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></div>
+        </div>
+      `).join('');
+    } catch (e) { container.innerHTML = '<p class="text-red-500">فشل تحميل الخصومات</p>'; }
   }
-
-  window.openDiscountModal = function(id = null) {
-    document.getElementById('discountModal').classList.remove('hidden');
-    document.getElementById('discountModalTitle').textContent = id ? 'تعديل الخصم' : 'إضافة خصم جديد';
-    document.getElementById('discountId').value = id || '';
-    if (!id) {
-      document.getElementById('discountCode').value = '';
-      document.getElementById('discountType').value = 'percentage';
-      document.getElementById('discountValue').value = '';
-      document.getElementById('discountStart').value = '';
-      document.getElementById('discountEnd').value = '';
-      document.getElementById('minOrder').value = '0';
-      document.getElementById('maxUses').value = '0';
-    } else {
-      // تحميل بيانات الخصم للتعديل (يمكن تطويره لاحقاً)
-    }
+  window.addDiscount = function() {
+    const code = prompt('كود الخصم (اختياري):');
+    const type = confirm('نسبة مئوية؟') ? 'percentage' : 'fixed';
+    const value = parseFloat(prompt('قيمة الخصم:')); if (isNaN(value)) return;
+    supabase.from('discounts').insert({ restaurant_id: App.restaurant.id, code, type, value, is_active: true }).then(() => loadDiscounts());
   };
-
-  window.closeDiscountModal = function() {
-    document.getElementById('discountModal').classList.add('hidden');
+  window.deleteDiscount = function(id) {
+    supabase.from('discounts').update({ is_active: false }).eq('id', id).then(() => loadDiscounts());
   };
-
-  window.saveDiscount = async function(e) {
-    e.preventDefault();
-    const id = document.getElementById('discountId').value;
-    const code = document.getElementById('discountCode').value;
-    const type = document.getElementById('discountType').value;
-    const value = parseFloat(document.getElementById('discountValue').value);
-    const start = document.getElementById('discountStart').value;
-    const end = document.getElementById('discountEnd').value;
-    const minOrder = parseFloat(document.getElementById('minOrder').value) || 0;
-    const maxUses = parseInt(document.getElementById('maxUses').value) || 0;
-
-    const discountData = {
-      restaurant_id: App.restaurant?.id,
-      code,
-      type,
-      value,
-      min_order_amount: minOrder,
-      max_uses: maxUses,
-      valid_from: start || null,
-      valid_until: end || null,
-      is_active: true
-    };
-
-    if (id) {
-      await supabase.from('discounts').update(discountData).eq('id', id);
-    } else {
-      await supabase.from('discounts').insert(discountData);
-    }
-
-    closeDiscountModal();
-    loadDiscounts();
-  };
-
-  window.deleteDiscount = async function(id) {
-    if (confirm('هل أنت متأكد من حذف هذا الخصم؟')) {
-      await supabase.from('discounts').update({ is_active: false }).eq('id', id);
-      loadDiscounts();
-    }
-  };
-
-  window.editDiscount = function(id) {
-    openDiscountModal(id);
-  };
-
-  if (window.App && App.currentPage === 'discounts') window.initDiscounts();
 </script>
