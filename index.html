@@ -5,66 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>نظام المطاعم - Restaurant SaaS</title>
 
-  <!-- Tailwind CSS -->
+  <!-- Tailwind CSS (من CDN - للتطوير) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Tajawal', 'Cairo', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- خط عربي -->
+
+  <!-- خط عربي احترافي -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/styles.css">
+  <!-- ملفات الأنماط الخاصة بالمشروع -->
+  <link rel="stylesheet" href="css/main.css">
 </head>
-<body class="bg-gray-100 h-screen flex flex-col overflow-hidden font-sans">
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
-  <!-- الهيدر -->
-  <header id="appHeader" class="bg-white shadow-sm px-4 py-3 flex items-center justify-between hidden">
-    <div class="flex items-center gap-4">
-      <h1 class="text-xl font-bold text-gray-800" id="headerTitle">لوحة التحكم</h1>
-      <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium" id="currencyBadge">ج.م EGP</span>
-    </div>
-    <div class="flex items-center gap-3">
-      <!-- زر تغيير اللغة -->
-      <button id="langToggle" class="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
-        <i class="fas fa-globe"></i> <span>English</span>
-      </button>
-      <!-- زر القائمة الجانبية للجوال -->
-      <button id="toggleSidebar" class="md:hidden text-gray-600 hover:text-gray-800 p-2">
-        <i class="fas fa-bars text-2xl"></i>
-      </button>
-      <!-- خروج -->
-      <button id="logoutBtn" class="text-red-500 hover:text-red-700 p-2">
-        <i class="fas fa-sign-out-alt text-xl"></i>
-      </button>
-    </div>
-  </header>
+  <!-- الهيدر الرئيسي (يتم بناؤه ديناميكياً عبر shared/layout.js) -->
+  <header id="appHeader"></header>
 
-  <!-- الشريط الجانبي + المحتوى -->
+  <!-- الحاوية الرئيسية: شريط جانبي + منطقة المحتوى -->
   <div class="flex flex-1 overflow-hidden">
-    <!-- الشريط الجانبي -->
-    <aside id="sidebar" class="w-64 bg-indigo-900 text-white flex flex-col hidden md:flex transition-all duration-300">
-      <div class="p-5 text-center border-b border-indigo-800">
-        <i class="fas fa-utensils text-3xl mb-2"></i>
-        <h2 class="font-bold text-lg" id="restaurantName">مطعم العائلة</h2>
-        <p class="text-xs text-indigo-200" id="subscriptionPlan">باقة Pro</p>
-      </div>
-      <nav class="flex-1 space-y-1 p-3" id="mainNav">
-        <!-- تم إنشاؤها ديناميكيًا -->
-      </nav>
-    </aside>
+    <!-- الشريط الجانبي (يتم بناؤه ديناميكياً) -->
+    <aside id="appSidebar" class="w-64 bg-indigo-900 text-white flex-col hidden md:flex transition-all duration-300"></aside>
 
-    <!-- منطقة المحتوى -->
-    <main id="pageContainer" class="flex-1 overflow-y-auto bg-gray-50 fade-in">
-      <!-- الصفحات تُعرض هنا -->
-    </main>
+    <!-- منطقة المحتوى الرئيسية حيث تُعرض الصفحات -->
+    <main id="pageContainer" class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6"></main>
   </div>
 
-  <!-- نافذة الخروج (مؤكد) - للـ Split Bill أو غيره -->
+  <!-- حاوية النوافذ المنبثقة (مودال) -->
   <div id="modalContainer"></div>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- ملفات التطبيق -->
-  <script src="js/i18n.js"></script>
-  <script src="js/app.js"></script>
+  <!-- محمل المكونات (لـ Supabase وغيره) -->
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
