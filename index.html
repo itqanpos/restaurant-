@@ -5,47 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>نظام المطاعم - Restaurant SaaS</title>
 
-  <!-- Tailwind CSS (من CDN - للتطوير) -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Tajawal', 'Cairo', 'sans-serif']
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- Font Awesome 6 -->
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-  <!-- خط عربي احترافي -->
+  <!-- الخط العربي -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-
-  <!-- ملفات الأنماط الخاصة بالمشروع -->
+  
+  <!-- الأنماط المخصصة -->
   <link rel="stylesheet" href="css/main.css">
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
-  <!-- الهيدر الرئيسي (يتم بناؤه ديناميكياً عبر shared/layout.js) -->
+  <!-- الهيكل الأساسي للتطبيق -->
   <header id="appHeader"></header>
-
-  <!-- الحاوية الرئيسية: شريط جانبي + منطقة المحتوى -->
+  
   <div class="flex flex-1 overflow-hidden">
-    <!-- الشريط الجانبي (يتم بناؤه ديناميكياً) -->
-    <aside id="appSidebar" class="w-64 bg-indigo-900 text-white flex-col hidden md:flex transition-all duration-300"></aside>
-
-    <!-- منطقة المحتوى الرئيسية حيث تُعرض الصفحات -->
+    <aside id="appSidebar" class="w-64 bg-indigo-900 text-white flex-col hidden md:flex"></aside>
     <main id="pageContainer" class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6"></main>
   </div>
-
-  <!-- حاوية النوافذ المنبثقة (مودال) -->
+  
+  <!-- الحاوية المشتركة للنوافذ المنبثقة -->
   <div id="modalContainer"></div>
 
-  <!-- محمل المكونات (لـ Supabase وغيره) -->
+  <!-- تحميل مكتبات الرسم البياني عند الحاجة -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- نقطة البداية لتطبيق JavaScript -->
   <script type="module" src="js/main.js"></script>
+
 </body>
 </html>
