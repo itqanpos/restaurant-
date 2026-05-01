@@ -1,173 +1,46 @@
-<!-- =============================================
-     صفحة المخزون (Inventory)
-     يتم تحميلها داخل #pageContent
-     ============================================= -->
 <div>
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold">المخزون</h2>
-    <button onclick="openAddItemModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
-      <i class="fas fa-plus"></i> إضافة مادة
-    </button>
-  </div>
-
-  <!-- جدول المخزون -->
-  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-    <table class="w-full text-sm">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="p-3 text-right">المادة</th>
-          <th class="p-3 text-center">الكمية الحالية</th>
-          <th class="p-3 text-center">الوحدة</th>
-          <th class="p-3 text-center">الحد الأدنى</th>
-          <th class="p-3 text-center">الحالة</th>
-          <th class="p-3 text-center">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody id="inventoryTableBody">
-        <!-- تُملأ من initInventory -->
-      </tbody>
-    </table>
-  </div>
-
-  <!-- نافذة منبثقة (مخفية افتراضياً) -->
-  <div id="itemModal" class="modal hidden">
-    <div class="modal-content">
-      <h3 class="text-lg font-bold mb-4" id="modalTitle">إضافة مادة جديدة</h3>
-      <form id="itemForm" onsubmit="saveItem(event)">
-        <input type="hidden" id="itemId">
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm mb-1">اسم المادة</label>
-            <input type="text" id="itemName" required class="w-full border rounded-lg p-2">
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-sm mb-1">الكمية</label>
-              <input type="number" id="itemQty" step="0.001" required class="w-full border rounded-lg p-2">
-            </div>
-            <div>
-              <label class="block text-sm mb-1">الوحدة</label>
-              <input type="text" id="itemUnit" required class="w-full border rounded-lg p-2" placeholder="كغم، لتر، حبة...">
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm mb-1">الحد الأدنى للتنبيه</label>
-            <input type="number" id="itemMin" step="0.001" required class="w-full border rounded-lg p-2">
-          </div>
-        </div>
-        <div class="flex gap-2 mt-6 justify-end">
-          <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 rounded-lg text-sm">إلغاء</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">حفظ</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  <h2 class="text-2xl font-bold mb-6">إدارة المخزون</h2>
+  <button onclick="openAddItemModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg mb-4"><i class="fas fa-plus"></i> إضافة مادة</button>
+  <table class="w-full bg-white rounded-xl shadow">
+    <thead class="bg-gray-50"><tr><th class="p-3">المادة</th><th>الكمية</th><th>الوحدة</th><th>الحد</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+    <tbody id="inventoryBody"><tr><td colspan="6" class="text-center py-4">جاري التحميل...</td></tr></tbody>
+  </table>
 </div>
-
 <script>
-  // دالة التهيئة
-  window.initInventory = function() {
-    renderInventoryTable();
-  };
-
-  function renderInventoryTable() {
-    const tbody = document.getElementById('inventoryTableBody');
-    if (!tbody || !window.App || !App.inventory) return;
-
-    const items = App.inventory;
-    if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-400">لا توجد مواد</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = items.map((item, index) => `
-      <tr class="border-t hover:bg-gray-50 transition">
-        <td class="p-3 font-medium">${item.name}</td>
-        <td class="p-3 text-center ${item.qty <= item.min ? 'text-red-600 font-bold' : ''}">${item.qty}</td>
-        <td class="p-3 text-center text-gray-500">${item.unit}</td>
-        <td class="p-3 text-center">${item.min}</td>
-        <td class="p-3 text-center">
-          <span class="px-2 py-1 rounded-full text-xs font-medium ${item.qty <= item.min ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
-            ${item.qty <= item.min ? 'منخفض' : 'متوفر'}
-          </span>
-        </td>
-        <td class="p-3 text-center">
-          <div class="flex justify-center gap-2">
-            <button onclick="editItem(${index})" class="text-blue-600 hover:text-blue-800" title="تعديل">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button onclick="deleteItem(${index})" class="text-red-500 hover:text-red-700" title="حذف">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+  window.initInventory = function() { renderInventoryTable(); };
+  async function renderInventoryTable() {
+    const tbody = document.getElementById('inventoryBody');
+    try {
+      if (!App.inventory.length) await App.loadRestaurantData();
+      const items = App.inventory;
+      tbody.innerHTML = items.map(item => `
+        <tr class="border-t">
+          <td class="p-3">${item.name}</td>
+          <td class="p-3 ${item.current_quantity <= item.min_quantity ? 'text-red-600 font-bold' : ''}">${item.current_quantity}</td>
+          <td class="p-3">${item.unit}</td>
+          <td class="p-3">${item.min_quantity}</td>
+          <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${item.current_quantity <= item.min_quantity ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${item.current_quantity <= item.min_quantity ? 'منخفض' : 'متوفر'}</span></td>
+          <td class="p-3"><button onclick="editItem('${item.id}')" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button onclick="deleteItem('${item.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td>
+        </tr>
+      `).join('');
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">فشل تحميل المخزون</td></tr>'; }
   }
-
-  // فتح نافذة الإضافة
   window.openAddItemModal = function() {
-    document.getElementById('modalTitle').textContent = 'إضافة مادة جديدة';
-    document.getElementById('itemId').value = '';
-    document.getElementById('itemName').value = '';
-    document.getElementById('itemQty').value = '0';
-    document.getElementById('itemUnit').value = '';
-    document.getElementById('itemMin').value = '0';
-    document.getElementById('itemModal').classList.remove('hidden');
+    const name = prompt('اسم المادة:'); if (!name) return;
+    const qty = parseFloat(prompt('الكمية الحالية:')); if (isNaN(qty)) return;
+    const unit = prompt('الوحدة (كغم، لتر...):'); if (!unit) return;
+    const min = parseFloat(prompt('الحد الأدنى:')); if (isNaN(min)) return;
+    window.Api.addInventoryItem({ restaurant_id: App.restaurant.id, name, unit, current_quantity: qty, min_quantity: min }).then(() => {
+      App.loadRestaurantData().then(renderInventoryTable);
+    });
   };
-
-  // تعديل مادة
-  window.editItem = function(index) {
-    if (!window.App) return;
-    const item = App.inventory[index];
-    document.getElementById('modalTitle').textContent = 'تعديل المادة';
-    document.getElementById('itemId').value = index;
-    document.getElementById('itemName').value = item.name;
-    document.getElementById('itemQty').value = item.qty;
-    document.getElementById('itemUnit').value = item.unit;
-    document.getElementById('itemMin').value = item.min;
-    document.getElementById('itemModal').classList.remove('hidden');
+  window.editItem = function(id) {
+    const item = App.inventory.find(i => i.id === id); if (!item) return;
+    const newQty = parseFloat(prompt('الكمية الجديدة:', item.current_quantity)); if (isNaN(newQty)) return;
+    window.Api.updateInventoryItem(id, { current_quantity: newQty }).then(() => App.loadRestaurantData().then(renderInventoryTable));
   };
-
-  // حذف مادة
-  window.deleteItem = function(index) {
-    if (!window.App || !confirm('هل أنت متأكد من حذف هذه المادة؟')) return;
-    App.inventory.splice(index, 1);
-    renderInventoryTable();
+  window.deleteItem = function(id) {
+    if (!confirm('حذف هذه المادة؟')) return;
+    window.Api.updateInventoryItem(id, { is_active: false }).then(() => App.loadRestaurantData().then(renderInventoryTable));
   };
-
-  // حفظ المادة (إضافة أو تعديل)
-  window.saveItem = function(event) {
-    event.preventDefault();
-    if (!window.App) return;
-
-    const index = document.getElementById('itemId').value;
-    const item = {
-      name: document.getElementById('itemName').value,
-      qty: parseFloat(document.getElementById('itemQty').value) || 0,
-      unit: document.getElementById('itemUnit').value,
-      min: parseFloat(document.getElementById('itemMin').value) || 0
-    };
-
-    if (index === '') {
-      // إضافة جديد
-      App.inventory.push(item);
-    } else {
-      // تحديث موجود
-      App.inventory[parseInt(index)] = item;
-    }
-
-    closeModal();
-    renderInventoryTable();
-  };
-
-  // إغلاق النافذة
-  window.closeModal = function() {
-    document.getElementById('itemModal').classList.add('hidden');
-  };
-
-  // تشغيل أولي
-  if (typeof window.App !== 'undefined' && App.currentPage === 'inventory') {
-    window.initInventory();
-  }
 </script>
