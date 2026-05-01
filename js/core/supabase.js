@@ -1,28 +1,33 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// عميل Supabase - تم تحديثه بمفاتيح المشروع
+// عميل Supabase (بالمفاتيح النهائية)
 // =============================================
 
-// استيراد مكتبة Supabase من CDN
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// ========== بيانات الاتصال الفعلية ==========
+// 🔑 مفاتيح Supabase الخاصة بك
 const SUPABASE_URL = 'https://xisosjmybqmuzveffhdb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM';
 
-// ========== إنشاء العميل ==========
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+// إنشاء العميل وتخزينه في window
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
   global: {
-    headers: { 'Accept-Language': 'ar' }
-  }
+    headers: { 'Accept-Language': 'ar' },
+  },
 });
 
-// جعله متاحًا عالميًا لسهولة الاستخدام في الملفات الأخرى
+// جعله متاحاً لجميع الوحدات
 window.supabase = supabase;
 
-console.log('✅ تم الاتصال بـ Supabase بنجاح');
+// تصديره للاستخدام المباشر
+export { supabase };
+
+// دالة التهيئة أصبحت فارغة للتوافق
+export function initSupabase() {
+  if (!supabase) console.error('فشل تحميل Supabase');
+}
