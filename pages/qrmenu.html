@@ -1,0 +1,172 @@
+<!-- =============================================
+     صفحة قائمة QR (للعميل)
+     يتم تحميلها داخل #pageContent
+     ============================================= -->
+<div class="max-w-2xl mx-auto">
+  <!-- هيدر المطعم -->
+  <div class="text-center mb-8">
+    <div class="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <i class="fas fa-utensils text-3xl text-indigo-600"></i>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-800">مطعم العائلة</h1>
+    <p class="text-gray-500 mt-2">امسح الكود للطلب</p>
+  </div>
+
+  <!-- قائمة المنتجات -->
+  <div class="space-y-4" id="qrMenuItems">
+    <!-- تُملأ ديناميكياً -->
+  </div>
+
+  <!-- زر السلة العائم -->
+  <div id="qrCartFab" class="fixed bottom-6 left-6 hidden">
+    <button onclick="openCart()" class="bg-indigo-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-indigo-700 transition flex items-center gap-2">
+      <i class="fas fa-shopping-cart"></i>
+      <span>عرض السلة</span>
+      <span id="qrCartCount" class="bg-white text-indigo-600 w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">0</span>
+    </button>
+  </div>
+
+  <!-- نافذة السلة -->
+  <div id="qrCartModal" class="modal hidden">
+    <div class="modal-content max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">الطلب الحالي</h3>
+        <button onclick="closeCart()" class="text-gray-400 hover:text-gray-600">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <div id="qrCartItems" class="space-y-3 mb-4">
+        <p class="text-gray-400 text-center">السلة فارغة</p>
+      </div>
+
+      <div class="border-t pt-4">
+        <div class="flex justify-between font-bold text-lg mb-4">
+          <span>الإجمالي</span>
+          <span id="qrCartTotal">0.00 ج.م</span>
+        </div>
+        <button onclick="qrPlaceOrder()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-700 transition">
+          إتمام الطلب
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // سلة العميل (مستقلة عن الكاشير)
+  let qrCart = [];
+
+  window.initQrmenu = function() {
+    renderQRMenu();
+  };
+
+  function renderQRMenu() {
+    const container = document.getElementById('qrMenuItems');
+    if (!container || !window.App) return;
+
+    const products = App.products || [];
+    container.innerHTML = products.map(p => `
+      <div class="bg-white rounded-xl shadow-sm p-4 flex justify-between items-center">
+        <div>
+          <h4 class="font-bold text-gray-800">${p.name}</h4>
+          <p class="text-xs text-gray-400">${p.category}</p>
+          <p class="text-green-600 font-bold mt-1">${p.price} ج.م</p>
+        </div>
+        <button onclick="qrAddToCart(${p.id}, '${p.name}', ${p.price})" 
+          class="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition active:scale-90">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  window.qrAddToCart = function(id, name, price) {
+    const existing = qrCart.find(item => item.id === id);
+    if (existing) {
+      existing.qty++;
+    } else {
+      qrCart.push({ id, name, price, qty: 1 });
+    }
+    updateQRCartUI();
+  };
+
+  function updateQRCartUI() {
+    const count = qrCart.reduce((sum, item) => sum + item.qty, 0);
+    const total = qrCart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+    // زر السلة العائم
+    const fab = document.getElementById('qrCartFab');
+    const countEl = document.getElementById('qrCartCount');
+    if (fab && count > 0) {
+      fab.classList.remove('hidden');
+      countEl.textContent = count;
+    } else if (fab) {
+      fab.classList.add('hidden');
+    }
+
+    // تحديث محتويات النافذة
+    const itemsContainer = document.getElementById('qrCartItems');
+    const totalEl = document.getElementById('qrCartTotal');
+    
+    if (itemsContainer) {
+      if (qrCart.length === 0) {
+        itemsContainer.innerHTML = '<p class="text-gray-400 text-center">السلة فارغة</p>';
+      } else {
+        itemsContainer.innerHTML = qrCart.map(item => `
+          <div class="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+            <span class="font-medium">${item.name} ×${item.qty}</span>
+            <span class="font-bold">${(item.price * item.qty).toFixed(2)} ج.م</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    if (totalEl) {
+      totalEl.textContent = `${total.toFixed(2)} ج.م`;
+    }
+  }
+
+  window.openCart = function() {
+    document.getElementById('qrCartModal').classList.remove('hidden');
+    updateQRCartUI();
+  };
+
+  window.closeCart = function() {
+    document.getElementById('qrCartModal').classList.add('hidden');
+  };
+
+  window.qrPlaceOrder = function() {
+    if (qrCart.length === 0) return;
+    
+    const total = qrCart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const items = qrCart.map(i => `${i.name} x${i.qty}`);
+    const orderId = Math.floor(Math.random() * 9000) + 1000;
+
+    // إضافة الطلب للمطبخ (إذا كان App موجوداً)
+    if (window.App && App.kitchenOrders) {
+      App.kitchenOrders.unshift({
+        id: orderId,
+        items: items,
+        status: 'new',
+        time: new Date().toLocaleTimeString('ar-EG')
+      });
+    }
+
+    alert(`تم تقديم طلبك #${orderId}!\nالإجمالي: ${total.toFixed(2)} ج.م\nسيتم تجهيزه قريباً`);
+    
+    qrCart = [];
+    updateQRCartUI();
+    closeCart();
+  };
+
+  // إغلاق النافذة بالنقر على الطبقة الخارجية
+  document.getElementById('qrCartModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeCart();
+  });
+
+  // تشغيل أولي
+  if (typeof window.App !== 'undefined' && App.currentPage === 'qrmenu') {
+    window.initQrmenu();
+  }
+</script>
