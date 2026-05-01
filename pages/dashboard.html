@@ -1,77 +1,23 @@
 <!-- =============================================
-     صفحة لوحة التحكم (Dashboard)
-     يتم تحميلها داخل #pageContent
+     لوحة التحكم (Dashboard)
      ============================================= -->
 <div>
   <h2 class="text-2xl font-bold mb-6">لوحة التحكم</h2>
 
   <!-- بطاقات الإحصائيات -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="bg-white p-5 rounded-xl shadow-sm">
-      <p class="text-gray-500 text-sm">مبيعات اليوم</p>
-      <h3 class="text-2xl font-bold text-green-600">1,250 ج.م</h3>
-    </div>
-    <div class="bg-white p-5 rounded-xl shadow-sm">
-      <p class="text-gray-500 text-sm">عدد الطلبات</p>
-      <h3 class="text-2xl font-bold text-blue-600">34</h3>
-    </div>
-    <div class="bg-white p-5 rounded-xl shadow-sm">
-      <p class="text-gray-500 text-sm">نقاط الولاء</p>
-      <h3 class="text-2xl font-bold text-yellow-500" id="loyaltyPoints">120</h3>
-    </div>
-    <div class="bg-white p-5 rounded-xl shadow-sm">
-      <p class="text-gray-500 text-sm">تنبيهات المخزون</p>
-      <h3 class="text-2xl font-bold text-red-500">2</h3>
-    </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="statsGrid">
+    <!-- البطاقات ستُملأ ديناميكياً -->
   </div>
 
-  <!-- الرسم البياني + أحدث الطلبات -->
+  <!-- صف ثانوي: رسم بياني + أحدث الطلبات -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm">
-      <h3 class="font-bold text-lg mb-4">مبيعات الأسبوع</h3>
-      <canvas id="salesChart" height="200"></canvas>
+      <h3 class="font-bold text-lg mb-4">المبيعات (آخر 7 أيام)</h3>
+      <canvas id="weeklyChart" height="200"></canvas>
     </div>
     <div class="bg-white p-5 rounded-xl shadow-sm">
       <h3 class="font-bold text-lg mb-4">أحدث الطلبات</h3>
-      <div class="space-y-2 text-sm" id="latestOrders">
-        <div class="flex justify-between"><span>طلب #103</span><span class="text-green-600">45 ج.م</span></div>
-        <div class="flex justify-between"><span>طلب #102</span><span class="text-green-600">120 ج.م</span></div>
-        <div class="flex justify-between"><span>طلب #101</span><span class="text-green-600">75 ج.م</span></div>
-      </div>
+      <div id="latestOrders" class="space-y-2 text-sm"></div>
     </div>
   </div>
 </div>
-
-<script>
-  // دالة التهيئة التي تُستدعى من index.html بعد تحميل الصفحة
-  window.initDashboard = function() {
-    // رسم بياني باستخدام Chart.js
-    const ctx = document.getElementById('salesChart');
-    if (ctx && window.Chart) {
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
-          datasets: [{
-            label: 'مبيعات (ج.م)',
-            data: [800, 950, 1200, 1100, 1400, 1250, 900],
-            borderColor: '#6366f1',
-            backgroundColor: 'rgba(99,102,241,0.1)',
-            tension: 0.4,
-            fill: true
-          }]
-        }
-      });
-    }
-
-    // تحديث نقاط الولاء من بيانات التطبيق (إن وجدت)
-    if (window.App && App.loyaltyPoints) {
-      document.getElementById('loyaltyPoints').textContent = App.loyaltyPoints;
-    }
-  };
-
-  // يمكن استدعاؤها مباشرة إذا لم يتم استدعاؤها من الخارج
-  if (typeof window.App !== 'undefined' && App.currentPage === 'dashboard') {
-    window.initDashboard();
-  }
-</script>
