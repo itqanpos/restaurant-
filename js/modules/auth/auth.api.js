@@ -3,9 +3,10 @@
 // وحدة المصادقة - طبقة API (Supabase)
 // =============================================
 
-import { supabase } from '../../core/supabase.js';
 import { appState } from '../../core/state.js';
-import { t } from '../../core/i18n.js';
+
+// استخدام المتغير العام (تم تعريفه في core/supabase.js)
+const supabase = window.supabase;
 
 /**
  * كائن يحتوي على جميع دوال المصادقة
@@ -19,7 +20,7 @@ export const authAPI = {
    */
   async signIn(email, password) {
     if (!email || !password) {
-      throw new Error(t('email') + ' و ' + t('password') + ' ' + 'مطلوبان');
+      throw new Error('البريد الإلكتروني وكلمة المرور مطلوبان');
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -45,7 +46,7 @@ export const authAPI = {
    * تسجيل مستخدم جديد
    * @param {string} email
    * @param {string} password
-   * @param {Object} metadata - بيانات إضافية (الاسم، الهاتف...)
+   * @param {Object} metadata
    * @returns {Promise<Object>}
    */
   async signUp(email, password, metadata = {}) {
@@ -69,7 +70,6 @@ export const authAPI = {
 
     if (error) throw this.translateError(error);
 
-    // إذا كان التسجيل يتطلب تأكيد البريد
     if (data.user && !data.session) {
       return { ...data, message: 'تم إرسال رابط تأكيد إلى بريدك الإلكتروني' };
     }
@@ -89,6 +89,8 @@ export const authAPI = {
     appState.set('user', null);
     appState.set('session', null);
     appState.set('restaurant', null);
+    appState.set('branches', []);
+    appState.set('currentBranch', null);
   },
 
   /**
@@ -113,7 +115,7 @@ export const authAPI = {
   },
 
   /**
-   * الحصول على جلسة المستخدم الحالية
+   * جلب جلسة المستخدم الحالية
    */
   async getSession() {
     const { data } = await supabase.auth.getSession();
@@ -136,7 +138,6 @@ export const authAPI = {
    */
   async loadRestaurantData(userId) {
     try {
-      // جلب دور المستخدم في المطعم
       const { data: roleData, error: roleError } = await supabase
         .from('user_restaurant_roles')
         .select(`
@@ -158,7 +159,7 @@ export const authAPI = {
       // تخزين بيانات المطعم
       appState.set('restaurant', roleData.restaurants);
       appState.set('currentBranch', roleData.branches);
-      
+
       // تخزين دور المستخدم
       const user = appState.get('user');
       if (user) {
@@ -190,6 +191,7 @@ export const authAPI = {
       'User already registered': 'البريد الإلكتروني مسجل بالفعل',
       'Password should be at least 6 characters': 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
       'Email rate limit exceeded': 'تم تجاوز الحد المسموح لإرسال البريد، حاول لاحقاً',
+      'Database error finding user': 'خطأ في قاعدة البيانات، حاول مرة أخرى',
     };
 
     const message = errorMap[error.message] || error.message;
