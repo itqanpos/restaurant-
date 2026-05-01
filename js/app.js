@@ -23,7 +23,7 @@ const App = {
   currentPage: 'dashboard',
   language: 'ar',
   currency: 'EGP',
-  taxRate: 14,
+  taxRate: 0,
   cart: [],
   products: [],
   inventory: [],
@@ -88,7 +88,7 @@ const App = {
   },
 
   // ---------- تحميل الصفحات (مع محتوى احتياطي) ----------
-  async loadPage(page) {
+  async loadPage(pages) {
     const container = document.getElementById('pageContainer');
     if (!container) return;
 
