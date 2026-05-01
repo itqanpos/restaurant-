@@ -4,56 +4,47 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>نظام المطاعم - Restaurant SaaS</title>
-  
-  <!-- Tailwind + أيقونات + خط -->
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- خط عربي -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  
+
   <style>
-    /* إعدادات الخطوط الأساسية */
     body { font-family: 'Tajawal', sans-serif; }
-    
-    /* روابط الشريط الجانبي */
-    .nav-link { 
-      cursor: pointer; border-radius: 12px; padding: 12px 16px; 
-      transition: 0.2s; display: flex; align-items: center; gap: 12px; 
+    .nav-link {
+      cursor: pointer; border-radius: 12px; padding: 12px 16px;
+      transition: 0.2s; display: flex; align-items: center; gap: 12px;
     }
     .nav-link:hover { background: #4338ca; color: white; }
     .nav-link.active { background: #3730a3; color: white; font-weight: 600; }
-    
-    /* تأثيرات اللمس */
     .product-card:active { transform: scale(0.96); background: #eef2ff; }
-    .qty-btn { 
-      width: 28px; height: 28px; border-radius: 50%; 
-      border: 1px solid #d1d5db; background: white; cursor: pointer; 
+    .qty-btn {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1px solid #d1d5db; background: white; cursor: pointer;
     }
     .qty-btn:active { background: #6366f1; color: white; }
-    
-    /* النوافذ المنبثقة */
-    .modal { 
-      position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
-      display: flex; align-items: center; justify-content: center; z-index: 50; 
+    .modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center; z-index: 50;
     }
-    .modal-content { 
-      background: white; border-radius: 20px; padding: 24px; 
-      width: 90%; max-width: 500px; 
+    .modal-content {
+      background: white; border-radius: 20px; padding: 24px;
+      width: 90%; max-width: 500px;
     }
-    
-    /* تحسينات الشريط الجانبي للجوال */
+    /* سلوك الشريط الجانبي للجوال */
     @media (max-width: 767px) {
-      #sidebar {
+      #appSidebar {
         position: fixed; top: 0; right: 0; height: 100%; z-index: 45;
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
+        transform: translateX(100%); transition: transform 0.3s ease;
       }
-      #sidebar.open {
-        transform: translateX(0);
-      }
+      #appSidebar.open { transform: translateX(0); }
       .sidebar-overlay { display: none; }
-      .sidebar-overlay.open { 
-        display: block; position: fixed; inset: 0; 
-        background: rgba(0,0,0,0.4); z-index: 40; 
+      .sidebar-overlay.open {
+        display: block; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.4); z-index: 40;
       }
     }
   </style>
@@ -73,43 +64,42 @@
       <button onclick="App.toggleLanguage()" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">
         <i class="fas fa-globe"></i> <span id="langLabel">English</span>
       </button>
-      <!-- زر فتح الشريط الجانبي (يظهر في الجوال) -->
-      <button onclick="App.toggleSidebar()" class="md:hidden text-gray-600 hover:text-gray-800 p-2">
+      <button onclick="App.toggleSidebar()" class="md:hidden text-gray-600 p-2">
         <i class="fas fa-bars text-2xl"></i>
       </button>
-      <button onclick="App.logout()" class="text-red-500 hover:text-red-700 p-2">
+      <button onclick="App.logout()" class="text-red-500 p-2">
         <i class="fas fa-sign-out-alt text-xl"></i>
       </button>
     </div>
   </header>
 
-  <!-- الشريط الجانبي + المحتوى -->
+  <!-- الحاوية الرئيسية -->
   <div class="flex flex-1 overflow-hidden">
     <!-- الشريط الجانبي -->
-    <aside id="sidebar" class="w-64 bg-indigo-900 text-white flex-col hidden md:flex transition">
+    <aside id="appSidebar" class="w-64 bg-indigo-900 text-white flex-col hidden md:flex">
       <div class="p-5 text-center border-b border-indigo-800">
         <i class="fas fa-utensils text-3xl mb-2"></i>
         <h2 class="font-bold">مطعم العائلة</h2>
         <p class="text-xs text-indigo-200">باقة Pro</p>
       </div>
-      <!-- زر إغلاق للجوال -->
-      <button onclick="App.toggleSidebar()" class="md:hidden absolute top-4 left-4 text-white hover:text-gray-300">
+      <button onclick="App.toggleSidebar()" class="md:hidden absolute top-4 left-4 text-white">
         <i class="fas fa-times text-xl"></i>
       </button>
       <nav class="flex-1 p-3 space-y-1 overflow-y-auto" id="mainNav"></nav>
     </aside>
 
-    <!-- حاوية الصفحات -->
+    <!-- المحتوى الرئيسي -->
     <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6" id="pageContainer"></main>
   </div>
 
-  <!-- نافذة منبثقة عامة -->
+  <!-- حاوية المودال -->
   <div id="modalContainer"></div>
 
-  <!-- المكتبات الأساسية -->
+  <!-- المكتبات -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- التطبيق الرئيسي -->
+
+  <!-- التطبيق (مصدر واحد فقط) -->
   <script src="js/app.js"></script>
 </body>
 </html>
