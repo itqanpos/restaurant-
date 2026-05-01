@@ -1,3 +1,7 @@
+// =============================================
+// صفحة تسجيل الدخول (without reload)
+// =============================================
+
 function initLogin() {
   document.getElementById('appHeader').style.display = 'none';
   document.getElementById('appSidebar').style.display = 'none';
@@ -29,8 +33,8 @@ function initLogin() {
     const password = document.getElementById('loginPassword').value;
     const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
     if (error) return alert(error.message);
-    window.App.user = data.user;
-    window.location.reload();
+    // نقل المستخدم مباشرة دون إعادة تحميل
+    await window.App.finishLogin(data.user, data.session);
   });
 
   signupForm.addEventListener('submit', async (e) => {
@@ -38,7 +42,11 @@ function initLogin() {
     const fullName = document.getElementById('signupName').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value;
-    const { data, error } = await window.supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
+    const { data, error } = await window.supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } }
+    });
     if (error) return alert(error.message);
     alert('تم إنشاء الحساب! يمكنك الآن تسجيل الدخول.');
     tabLogin.click();
