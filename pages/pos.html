@@ -1,0 +1,187 @@
+<!-- =============================================
+     صفحة نقطة البيع (POS)
+     يتم تحميلها داخل #pageContent
+     ============================================= -->
+<div class="flex h-full -m-6">
+  <!-- منطقة المنتجات -->
+  <div class="flex-1 flex flex-col p-6">
+    <!-- شريط الخيارات -->
+    <div class="flex gap-2 mb-4 flex-wrap">
+      <select id="orderType" class="border rounded-lg p-2 text-sm">
+        <option value="dine_in">داخل المطعم</option>
+        <option value="takeaway">تيك أواي</option>
+        <option value="delivery">دليفري</option>
+      </select>
+      <input type="text" id="tableNo" placeholder="رقم الطاولة" class="border rounded-lg p-2 w-24 text-sm">
+      <input type="text" id="customerName" placeholder="اسم العميل" class="border rounded-lg p-2 flex-1 min-w-[150px] text-sm">
+    </div>
+
+    <!-- شبكة المنتجات -->
+    <div class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" id="productGrid">
+      <!-- تُملأ من initPOS -->
+    </div>
+  </div>
+
+  <!-- سلة المشتريات -->
+  <div class="w-80 lg:w-96 bg-white border-r flex flex-col flex-shrink-0">
+    <div class="p-4 border-b flex justify-between items-center">
+      <h2 class="font-bold text-lg">الطلب الحالي</h2>
+      <button onclick="clearCart()" class="text-red-500 hover:text-red-700">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+
+    <!-- محتويات السلة -->
+    <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-3">
+      <p class="text-gray-400 text-center mt-8">السلة فارغة</p>
+    </div>
+
+    <!-- ملخص السلة وأزرار الدفع -->
+    <div class="border-t p-4 bg-gray-50">
+      <div class="flex justify-between font-bold text-lg mb-3">
+        <span>الإجمالي</span>
+        <span id="cartTotal">0.00 ج.م</span>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <button onclick="placeOrder('cash')" class="bg-green-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-green-700">
+          <i class="fas fa-money-bill"></i> نقداً
+        </button>
+        <button onclick="placeOrder('visa')" class="bg-blue-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+          <i class="fab fa-cc-visa"></i> فيزا
+        </button>
+        <button onclick="placeOrder('wallet')" class="bg-purple-600 text-white p-2 rounded-lg text-sm font-medium hover:bg-purple-700">
+          <i class="fas fa-wallet"></i> محفظة
+        </button>
+      </div>
+      <button onclick="placeOrder('cash')" id="placeOrderBtn" disabled
+        class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+        إتمام الطلب
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // دالة التهيئة
+  window.initPOS = function() {
+    // تنظيف السلة إذا كانت محملة مسبقاً
+    if (window.App && App.cart && App.cart.length > 0) {
+      App.cart = [];
+    }
+    renderProducts();
+    updateCartDisplay();
+  };
+
+  // عرض المنتجات
+  function renderProducts() {
+    const grid = document.getElementById('productGrid');
+    if (!grid || !window.App) return;
+
+    const products = App.products || [];
+    grid.innerHTML = products.map(p => `
+      <div class="product-card bg-white rounded-xl shadow-sm p-4 text-center cursor-pointer border-2 border-transparent hover:border-indigo-400 transition"
+           onclick="addToCart(${p.id}, '${p.name}', ${p.price})">
+        <div class="text-xs text-gray-400 mb-1">${p.category}</div>
+        <div class="font-bold">${p.name}</div>
+        <div class="text-green-600 font-bold mt-2">${p.price} ج.م</div>
+      </div>
+    `).join('');
+  }
+
+  // إضافة للسلة
+  window.addToCart = function(id, name, price) {
+    if (!window.App) return;
+    const existing = App.cart.find(item => item.id === id);
+    if (existing) {
+      existing.qty++;
+    } else {
+      App.cart.push({ id, name, price, qty: 1 });
+    }
+    updateCartDisplay();
+  };
+
+  // تعديل الكمية
+  window.changeQty = function(id, delta) {
+    if (!window.App) return;
+    const item = App.cart.find(i => i.id === id);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) {
+      App.cart = App.cart.filter(i => i.id !== id);
+    }
+    updateCartDisplay();
+  };
+
+  // مسح السلة
+  window.clearCart = function() {
+    if (window.App) App.cart = [];
+    updateCartDisplay();
+  };
+
+  // تحديث عرض السلة
+  function updateCartDisplay() {
+    const container = document.getElementById('cartItems');
+    const totalEl = document.getElementById('cartTotal');
+    const placeBtn = document.getElementById('placeOrderBtn');
+    if (!container || !window.App) return;
+
+    if (App.cart.length === 0) {
+      container.innerHTML = '<p class="text-gray-400 text-center mt-8">السلة فارغة</p>';
+      if (totalEl) totalEl.textContent = '0.00 ج.م';
+      if (placeBtn) placeBtn.disabled = true;
+      return;
+    }
+
+    container.innerHTML = App.cart.map(item => `
+      <div class="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+        <div>
+          <div class="font-medium text-sm">${item.name}</div>
+          <div class="text-xs text-gray-500">${item.price} ج.م × ${item.qty}</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button>
+          <span class="font-bold">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+        </div>
+      </div>
+    `).join('');
+
+    const total = App.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    if (totalEl) totalEl.textContent = `${total.toFixed(2)} ج.م`;
+    if (placeBtn) placeBtn.disabled = false;
+  }
+
+  // إتمام الطلب
+  window.placeOrder = function(method) {
+    if (!window.App || App.cart.length === 0) return;
+
+    const orderId = Math.floor(Math.random() * 9000) + 1000;
+    const total = App.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const items = App.cart.map(i => `${i.name} x${i.qty}`);
+
+    // إضافة للمطبخ
+    if (App.kitchenOrders) {
+      App.kitchenOrders.unshift({
+        id: orderId,
+        items: items,
+        status: 'new',
+        time: new Date().toLocaleTimeString('ar-EG')
+      });
+    }
+
+    // نقاط الولاء
+    const points = Math.floor(total / 10);
+    if (App.loyaltyPoints !== undefined) {
+      App.loyaltyPoints += points;
+    }
+
+    alert(`تم الطلب #${orderId}\nستكسب ${points} نقطة ولاء`);
+    App.cart = [];
+    updateCartDisplay();
+  };
+
+  // تشغيل أولي
+  if (typeof window.App !== 'undefined' && App.currentPage === 'pos') {
+    window.initPOS();
+  }
+</script>
