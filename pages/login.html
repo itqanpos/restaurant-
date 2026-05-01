@@ -1,10 +1,9 @@
 <!-- =============================================
-     صفحة تسجيل الدخول (Login)
+     صفحة تسجيل الدخول (Login) - نسخة Supabase
      يتم تحميلها داخل #pageContent
      ============================================= -->
 <div class="min-h-full flex items-center justify-center">
   <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-    <!-- شعار -->
     <div class="text-center mb-8">
       <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <i class="fas fa-utensils text-2xl text-indigo-600"></i>
@@ -13,14 +12,13 @@
       <p class="text-gray-500 mt-2">أهلاً بك في نظام إدارة المطاعم</p>
     </div>
 
-    <!-- نموذج تسجيل الدخول -->
     <form id="loginForm" class="space-y-5">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
         <div class="relative">
           <i class="fas fa-envelope absolute right-3 top-3.5 text-gray-400"></i>
           <input type="email" id="email" required
-            class="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            class="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl"
             placeholder="example@restaurant.com">
         </div>
       </div>
@@ -30,83 +28,63 @@
         <div class="relative">
           <i class="fas fa-lock absolute right-3 top-3.5 text-gray-400"></i>
           <input type="password" id="password" required
-            class="w-full pr-10 pl-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+            class="w-full pr-10 pl-10 py-3 border border-gray-300 rounded-xl"
             placeholder="••••••••">
-          <button type="button" onclick="togglePasswordVisibility()"
+          <button type="button" onclick="togglePassword()"
             class="absolute left-3 top-3.5 text-gray-400 hover:text-gray-600">
             <i class="fas fa-eye" id="toggleIcon"></i>
           </button>
         </div>
       </div>
 
-      <!-- رسالة خطأ -->
       <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm"></div>
 
-      <!-- زر الدخول -->
       <button type="submit"
-        class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-indigo-700 transition">
+        class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-indigo-700">
         <i class="fas fa-sign-in-alt ml-2"></i> دخول
       </button>
     </form>
-
-    <!-- روابط إضافية -->
-    <p class="mt-6 text-center text-sm text-gray-500">
-      ليس لديك حساب؟ <a href="#" onclick="alert('التسجيل غير متاح حالياً')" class="text-indigo-600 hover:underline">سجل الآن</a>
-    </p>
   </div>
 </div>
 
 <script>
-  // دالة التهيئة
   window.initLogin = function() {
-    // إخفاء الهيدر والسايد بار في صفحة الدخول
-    const header = document.getElementById('appHeader');
-    const sidebar = document.getElementById('appSidebar');
-    if (header) header.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
-
-    // ربط نموذج الدخول
+    document.getElementById('appHeader').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'none';
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
   };
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const errorDiv = document.getElementById('loginError');
 
-    // محاكاة تسجيل الدخول
-    if (!email || !password) {
-      errorDiv.textContent = 'الرجاء إدخال البريد الإلكتروني وكلمة المرور';
+    if (!window.supabase) {
+      errorDiv.textContent = 'Supabase غير متصل. تأكد من تحميل الصفحة عبر خادم محلي.';
       errorDiv.classList.remove('hidden');
       return;
     }
 
-    if (password.length < 6) {
-      errorDiv.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+    const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      errorDiv.textContent = error.message.includes('Invalid login') ?
+        'البريد الإلكتروني أو كلمة المرور غير صحيحة' : error.message;
       errorDiv.classList.remove('hidden');
       return;
     }
 
-    // محاكاة نجاح الدخول
+    // نجاح الدخول
     errorDiv.classList.add('hidden');
-    alert('تم تسجيل الدخول بنجاح (محاكاة)');
-
-    // إظهار الهيدر والسايد بار مجدداً
-    const header = document.getElementById('appHeader');
-    const sidebar = document.getElementById('appSidebar');
-    if (header) header.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
-
-    // العودة للرئيسية
-    if (typeof loadPage === 'function') {
-      loadPage('dashboard');
-    } else {
-      window.location.hash = 'dashboard';
-    }
+    document.getElementById('appHeader').style.display = 'flex';
+    document.getElementById('sidebar').style.display = 'flex';
+    window.App.user = data.user;
+    window.location.hash = 'dashboard';
+    if (typeof loadPage === 'function') loadPage('dashboard');
   }
 
-  window.togglePasswordVisibility = function() {
+  window.togglePassword = function() {
     const input = document.getElementById('password');
     const icon = document.getElementById('toggleIcon');
     if (input.type === 'password') {
@@ -118,8 +96,5 @@
     }
   };
 
-  // تشغيل أولي
-  if (typeof window.App !== 'undefined' && App.currentPage === 'login') {
-    window.initLogin();
-  }
+  if (window.App && App.currentPage === 'login') window.initLogin();
 </script>
