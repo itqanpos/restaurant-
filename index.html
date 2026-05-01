@@ -4,127 +4,77 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>نظام المطاعم - Restaurant SaaS</title>
-
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- خط عربي -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-
-  <!-- ملفات الأنماط -->
   <link rel="stylesheet" href="css/styles.css">
-
   <style>
-    /* إعدادات احتياطية للشريط الجانبي والمظهر العام */
     body { font-family: 'Tajawal', sans-serif; height: 100vh; overflow: hidden; }
-    .nav-link {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; border-radius: 12px;
-      color: #cbd5e1; transition: all 0.2s; cursor: pointer;
-    }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; color: #cbd5e1; transition: all 0.2s; cursor: pointer; }
     .nav-link:hover { background: #4338ca; color: white; }
     .nav-link.active { background: #3730a3; color: white; font-weight: 600; }
-
-    /* سلوك الشريط الجانبي للجوال */
     @media (max-width: 767px) {
-      #appSidebar {
-        position: fixed; top: 0; right: 0; height: 100%; z-index: 45;
-        transform: translateX(100%); transition: transform 0.3s ease;
-      }
+      #appSidebar { position: fixed; top: 0; right: 0; height: 100%; z-index: 45; transform: translateX(100%); transition: transform 0.3s ease; }
       #appSidebar.open { transform: translateX(0); }
       .sidebar-overlay { display: none; }
-      .sidebar-overlay.open {
-        display: block; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.4); z-index: 40;
-      }
+      .sidebar-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40; }
     }
   </style>
 </head>
 <body class="bg-gray-100">
-
-  <!-- طبقة داكنة للهاتف عند فتح الشريط الجانبي -->
   <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
 
-  <!-- الهيدر -->
   <header id="appHeader" class="bg-white shadow-sm px-4 py-3 items-center justify-between hidden" style="display: none;">
     <div class="flex items-center gap-4">
       <h1 class="text-xl font-bold" id="headerTitle">لوحة التحكم</h1>
       <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">ج.م EGP</span>
     </div>
     <div class="flex items-center gap-3">
-      <button onclick="App.toggleLanguage()" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">
-        <i class="fas fa-globe"></i> <span id="langLabel">English</span>
-      </button>
-      <button onclick="App.toggleSidebar()" class="md:hidden text-gray-600 p-2">
-        <i class="fas fa-bars text-2xl"></i>
-      </button>
-      <button onclick="App.logout()" class="text-red-500 p-2">
-        <i class="fas fa-sign-out-alt text-xl"></i>
-      </button>
+      <button onclick="App.toggleLanguage()" class="bg-gray-200 px-3 py-2 rounded-lg text-sm"><i class="fas fa-globe"></i> <span id="langLabel">English</span></button>
+      <button onclick="App.toggleSidebar()" class="md:hidden text-gray-600 p-2"><i class="fas fa-bars text-2xl"></i></button>
+      <button onclick="App.logout()" class="text-red-500 p-2"><i class="fas fa-sign-out-alt text-xl"></i></button>
     </div>
   </header>
 
-  <!-- الحاوية الرئيسية -->
   <div class="flex flex-1" style="height: calc(100vh - 64px);">
-    <!-- الشريط الجانبي -->
     <aside id="appSidebar" class="w-64 bg-indigo-900 text-white flex-col md:flex" style="display: none;">
       <div class="p-5 text-center border-b border-indigo-800">
         <i class="fas fa-utensils text-3xl mb-2"></i>
         <h2 class="font-bold">مطعم العائلة</h2>
         <p class="text-xs text-indigo-200">باقة Pro</p>
       </div>
-      <button onclick="App.toggleSidebar()" class="md:hidden absolute top-4 left-4 text-white">
-        <i class="fas fa-times text-xl"></i>
-      </button>
-      <!-- قائمة الصفحات ثابتة -->
+      <button onclick="App.toggleSidebar()" class="md:hidden absolute top-4 left-4 text-white"><i class="fas fa-times text-xl"></i></button>
       <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
-        <div class="nav-link" data-page="dashboard" onclick="App.loadPage('dashboard')">
-          <i class="fas fa-th-large"></i> <span>الرئيسية</span>
-        </div>
-        <div class="nav-link" data-page="pos" onclick="App.loadPage('pos')">
-          <i class="fas fa-cash-register"></i> <span>الكاشير</span>
-        </div>
-        <div class="nav-link" data-page="kitchen" onclick="App.loadPage('kitchen')">
-          <i class="fas fa-fire"></i> <span>المطبخ</span>
-        </div>
-        <div class="nav-link" data-page="inventory" onclick="App.loadPage('inventory')">
-          <i class="fas fa-boxes"></i> <span>المخزون</span>
-        </div>
-        <div class="nav-link" data-page="reports" onclick="App.loadPage('reports')">
-          <i class="fas fa-chart-bar"></i> <span>التقارير</span>
-        </div>
-        <div class="nav-link" data-page="discounts" onclick="App.loadPage('discounts')">
-          <i class="fas fa-tags"></i> <span>الخصومات</span>
-        </div>
-        <div class="nav-link" data-page="users" onclick="App.loadPage('users')">
-          <i class="fas fa-users"></i> <span>المستخدمين</span>
-        </div>
-        <div class="nav-link" data-page="settings" onclick="App.loadPage('settings')">
-          <i class="fas fa-cog"></i> <span>الإعدادات</span>
-        </div>
-        <div class="nav-link" data-page="qrmenu" onclick="App.loadPage('qrmenu')">
-          <i class="fas fa-qrcode"></i> <span>قائمة QR</span>
-        </div>
+        <div class="nav-link" data-page="dashboard" onclick="App.loadPage('dashboard')"><i class="fas fa-th-large"></i> <span>الرئيسية</span></div>
+        <div class="nav-link" data-page="pos" onclick="App.loadPage('pos')"><i class="fas fa-cash-register"></i> <span>الكاشير</span></div>
+        <div class="nav-link" data-page="kitchen" onclick="App.loadPage('kitchen')"><i class="fas fa-fire"></i> <span>المطبخ</span></div>
+        <div class="nav-link" data-page="inventory" onclick="App.loadPage('inventory')"><i class="fas fa-boxes"></i> <span>المخزون</span></div>
+        <div class="nav-link" data-page="reports" onclick="App.loadPage('reports')"><i class="fas fa-chart-bar"></i> <span>التقارير</span></div>
+        <div class="nav-link" data-page="discounts" onclick="App.loadPage('discounts')"><i class="fas fa-tags"></i> <span>الخصومات</span></div>
+        <div class="nav-link" data-page="users" onclick="App.loadPage('users')"><i class="fas fa-users"></i> <span>المستخدمين</span></div>
+        <div class="nav-link" data-page="settings" onclick="App.loadPage('settings')"><i class="fas fa-cog"></i> <span>الإعدادات</span></div>
+        <div class="nav-link" data-page="qrmenu" onclick="App.loadPage('qrmenu')"><i class="fas fa-qrcode"></i> <span>قائمة QR</span></div>
       </nav>
     </aside>
-
-    <!-- المحتوى الرئيسي -->
-    <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6" id="pageContainer">
-      <!-- يتم تحميل الصفحات هنا -->
-    </main>
+    <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6" id="pageContainer"></main>
   </div>
 
-  <!-- حاوية النوافذ المنبثقة -->
   <div id="modalContainer"></div>
 
-  <!-- المكتبات الأساسية -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-  <!-- طبقة API -->
   <script src="js/modules/api.js"></script>
-  <!-- التطبيق الرئيسي -->
   <script src="js/app.js"></script>
+  <!-- تحميل الصفحات البرمجية -->
+  <script src="js/pages/login.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/pos.js"></script>
+  <script src="js/pages/kitchen.js"></script>
+  <script src="js/pages/inventory.js"></script>
+  <script src="js/pages/reports.js"></script>
+  <script src="js/pages/discounts.js"></script>
+  <script src="js/pages/users.js"></script>
+  <script src="js/pages/settings.js"></script>
+  <script src="js/pages/qrmenu.js"></script>
 </body>
 </html>
