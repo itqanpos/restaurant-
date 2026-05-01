@@ -2,25 +2,18 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>نظام المطاعم - Restaurant SaaS</title>
-
-  <!-- Tailwind CSS -->
+  <!-- Tailwind + أيقونات + خط -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- خط عربي -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Tajawal', sans-serif; height: 100vh; overflow: hidden; }
-    .nav-link {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; border-radius: 12px;
-      color: #cbd5e1; transition: all 0.2s; cursor: pointer;
-    }
-    .nav-link:hover, .nav-link.active { background-color: #4338ca; color: white; }
+    body { font-family: 'Tajawal', sans-serif; }
+    .page-content { display: none; }
+    .page-content.active { display: block; }
+    .nav-link { cursor: pointer; border-radius: 12px; padding: 12px 16px; transition: 0.2s; }
+    .nav-link:hover, .nav-link.active { background: #4338ca; color: white; }
     .product-card:active { transform: scale(0.96); background: #eef2ff; }
     .qty-btn {
       width: 28px; height: 28px; border-radius: 50%;
@@ -32,32 +25,27 @@
       display: flex; align-items: center; justify-content: center; z-index: 50;
     }
     .modal-content { background: white; border-radius: 20px; padding: 24px; width: 90%; max-width: 500px; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .fade-in { animation: fadeIn 0.3s ease; }
   </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 h-screen flex flex-col">
 
-  <!-- الهيدر -->
+  <!-- هيدر -->
   <header id="appHeader" class="bg-white shadow-sm px-4 py-3 flex items-center justify-between hidden">
     <div class="flex items-center gap-4">
       <h1 class="text-xl font-bold" id="headerTitle">لوحة التحكم</h1>
       <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">ج.م EGP</span>
     </div>
     <div class="flex items-center gap-3">
-      <button onclick="toggleLanguage()" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">
+      <button onclick="App.toggleLanguage()" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">
         <i class="fas fa-globe"></i> <span id="langLabel">English</span>
       </button>
-      <button onclick="toggleSidebar()" class="md:hidden text-gray-600">
-        <i class="fas fa-bars text-2xl"></i>
-      </button>
-      <button onclick="logout()" class="text-red-500"><i class="fas fa-sign-out-alt text-xl"></i></button>
+      <button onclick="App.toggleSidebar()" class="md:hidden"><i class="fas fa-bars text-2xl"></i></button>
+      <button onclick="App.logout()" class="text-red-500"><i class="fas fa-sign-out-alt text-xl"></i></button>
     </div>
   </header>
 
   <!-- الشريط الجانبي + المحتوى -->
-  <div class="flex h-full">
-    <!-- الشريط الجانبي -->
+  <div class="flex flex-1 overflow-hidden">
     <aside id="sidebar" class="w-64 bg-indigo-900 text-white flex-col hidden md:flex transition">
       <div class="p-5 text-center border-b border-indigo-800">
         <i class="fas fa-utensils text-3xl mb-2"></i>
@@ -67,114 +55,18 @@
       <nav class="flex-1 p-3 space-y-1" id="mainNav"></nav>
     </aside>
 
-    <!-- منطقة المحتوى (يتم تحميل الصفحات هنا) -->
-    <main id="pageContent" class="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50"></main>
+    <!-- حاوية الصفحات (تتحكم بها JS) -->
+    <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6" id="pageContainer">
+      <!-- المحتوى يُحقن هنا -->
+    </main>
   </div>
 
-  <!-- نافذة منبثقة -->
+  <!-- نافذة منبثقة عامة -->
   <div id="modalContainer"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Supabase + App الرئيسي -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script>
-    // ---------- بيانات عامة ----------
-    const App = {
-      language: 'ar',
-      currency: 'EGP',
-      cart: [],
-      kitchenOrders: [],
-      inventory: [
-        { name: 'لحم بقري', qty: 8.5, unit: 'كغم', min: 5 },
-        { name: 'زيت قلي', qty: 3, unit: 'لتر', min: 10 },
-        { name: 'خبز', qty: 60, unit: 'حبة', min: 20 }
-      ],
-      products: [
-        { id: 1, name: 'برجر دجاج', price: 65, category: 'وجبات رئيسية' },
-        { id: 2, name: 'برجر لحم', price: 75, category: 'وجبات رئيسية' },
-        { id: 3, name: 'بطاطس مقلية', price: 25, category: 'مقبلات' },
-        { id: 4, name: 'كولا', price: 15, category: 'مشروبات' },
-        { id: 5, name: 'عصير برتقال', price: 20, category: 'مشروبات' }
-      ],
-      loyaltyPoints: 120,
-      currentPage: 'dashboard',
-      formatCurrency(amount) {
-        return amount.toFixed(2) + ' ج.م';
-      }
-    };
-
-    // ---------- تحميل الصفحات ----------
-    async function loadPage(page) {
-      const container = document.getElementById('pageContent');
-      try {
-        const response = await fetch(`pages/${page}.html`);
-        if (!response.ok) throw new Error('صفحة غير موجودة');
-        const html = await response.text();
-        container.innerHTML = html;
-        container.classList.add('fade-in');
-        setTimeout(() => container.classList.remove('fade-in'), 300);
-        App.currentPage = page;
-        // تحديث الشريط الجانبي
-        document.querySelectorAll('.nav-link').forEach(link => {
-          link.classList.toggle('active', link.dataset.page === page);
-        });
-        document.getElementById('headerTitle').textContent = getPageTitle(page);
-        // تنفيذ سكريبت الصفحة (إن وجد)
-        if (typeof window[`init${page.charAt(0).toUpperCase() + page.slice(1)}`] === 'function') {
-          window[`init${page.charAt(0).toUpperCase() + page.slice(1)}`]();
-        }
-      } catch (err) {
-        container.innerHTML = '<p class="text-red-500">فشل تحميل الصفحة</p>';
-      }
-    }
-
-    function getPageTitle(page) {
-      const titles = {
-        dashboard: 'الرئيسية', pos: 'الكاشير', kitchen: 'المطبخ',
-        inventory: 'المخزون', reports: 'التقارير', settings: 'الإعدادات',
-        qrmenu: 'قائمة QR', login: 'تسجيل الدخول'
-      };
-      return titles[page] || page;
-    }
-
-    // ---------- بناء الشريط الجانبي ----------
-    function buildNav() {
-      const pages = ['dashboard', 'pos', 'kitchen', 'inventory', 'reports', 'settings', 'qrmenu'];
-      const icons = {
-        dashboard: 'th-large', pos: 'cash-register', kitchen: 'fire',
-        inventory: 'boxes', reports: 'chart-bar', settings: 'cog', qrmenu: 'qrcode'
-      };
-      document.getElementById('mainNav').innerHTML = pages.map(p => `
-        <div class="nav-link" data-page="${p}" onclick="loadPage('${p}')">
-          <i class="fas fa-${icons[p]}"></i> <span>${getPageTitle(p)}</span>
-        </div>
-      `).join('');
-    }
-
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('hidden');
-    }
-
-    function toggleLanguage() {
-      App.language = App.language === 'ar' ? 'en' : 'ar';
-      document.documentElement.lang = App.language;
-      document.documentElement.dir = App.language === 'ar' ? 'rtl' : 'ltr';
-      document.getElementById('langLabel').textContent = App.language === 'ar' ? 'English' : 'العربية';
-      loadPage(App.currentPage);
-    }
-
-    function logout() {
-      alert('تسجيل الخروج');
-      // هنا استدعاء Supabase signOut
-    }
-
-    // ---------- بدء التشغيل ----------
-    window.onload = () => {
-      document.getElementById('appHeader').classList.remove('hidden');
-      document.getElementById('sidebar').classList.remove('hidden');
-      buildNav();
-      loadPage('dashboard');
-    };
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
