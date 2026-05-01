@@ -1,6 +1,6 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// التطبيق الرئيسي (مع finishLogin)
+// التطبيق الرئيسي (النسخة الشاملة مع المحطات والطابعات)
 // =============================================
 
 const App = {
@@ -163,19 +163,22 @@ const App = {
     const subtotal = this.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
     let discount = 0;
     if (this.appliedDiscount) {
-      discount = this.appliedDiscount.type === 'percentage' ? subtotal * (this.appliedDiscount.value / 100) : this.appliedDiscount.value;
+      discount = this.appliedDiscount.type === 'percentage'
+        ? subtotal * (this.appliedDiscount.value / 100)
+        : this.appliedDiscount.value;
     }
     const total = Math.max(0, subtotal - discount);
     return { subtotal, discount, total };
   },
 
+  // ---------- إنشاء الطلب مع دعم المحطات والطابعات ----------
   async placeOrder() {
     if (!this.cart.length) return;
     const { subtotal, discount, total } = this.getCartTotals();
     const order = {
       restaurant_id: this.restaurant?.id,
       branch_id: this.branch?.id,
-      type: 'dine_in',
+      type: document.getElementById('posOrderType')?.value || 'dine_in',
       status: 'new',
       subtotal,
       discount_amount: discount,
@@ -184,12 +187,78 @@ const App = {
       created_by: this.user?.id
     };
     try {
-      await window.Api.createOrder(order, this.cart.map(i => ({ product_id: i.id, name: i.name, price: i.price, quantity: i.qty })));
-      alert('تم الطلب بنجاح');
+      const newOrder = await window.Api.createOrder(order, this.cart.map(i => ({
+        product_id: i.id,
+        name: i.name,
+        price: i.price,
+        quantity: i.qty,
+        notes: i.notes || ''
+      })));
+
+      // ★ تقسيم الطلب حسب المحطات (طابعات / شاشات) ★
+      this.dispatchToStations(newOrder);
+
+      alert('تم الطلب #' + newOrder.order_number);
       this.clearCart();
     } catch (e) {
       alert('فشل إنشاء الطلب: ' + e.message);
     }
+  },
+
+  // ----- نظام المحطات (طابعات / أقسام) -----
+  dispatchToStations(order) {
+    // قراءة المحطات من localStorage (حُفظت من صفحة الإعدادات)
+    let stations = [];
+    try {
+      stations = JSON.parse(localStorage.getItem('kitchenStations') || '[]');
+    } catch (e) { return; }
+    if (!stations.length) return;
+
+    // ربط عناصر السلة بتصنيفاتها
+    const itemsWithCat = this.cart.map(cartItem => {
+      const product = this.products.find(p => p.id == cartItem.id);
+      return { ...cartItem, categoryId: product?.category_id || null };
+    });
+
+    // لكل محطة، افتح نافذة منبثقة إذا كان لديها عناصر
+    stations.forEach(station => {
+      const stationItems = itemsWithCat.filter(item =>
+        station.categories?.includes(item.categoryId)
+      );
+      if (stationItems.length > 0) {
+        this.printStationTicket(station.name, stationItems, order.order_number);
+      }
+    });
+  },
+
+  printStationTicket(stationName, items, orderNumber) {
+    const width = 400;
+    const height = 500;
+    const left = screen.width - width - 20;
+    const top = 100;
+    const win = window.open('', `station_${stationName}`, `width=${width},height=${height},left=${left},top=${top}`);
+    if (!win) return;
+    win.document.write(`
+      <html dir="rtl">
+      <head>
+        <style>
+          body { font-family: 'Tajawal', sans-serif; padding: 10px; font-size: 14px; }
+          h3 { text-align: center; margin-bottom: 5px; }
+          .item { display: flex; justify-content: space-between; margin: 4px 0; }
+          @media print { body { width: 80mm; } }
+        </style>
+      </head>
+      <body>
+        <h3>${stationName} - طلب #${orderNumber}</h3>
+        <hr>
+        ${items.map(i => `<div class="item"><span>${i.name} x${i.qty}</span>${i.notes ? ' ('+i.notes+')' : ''}</div>`).join('')}
+        <hr>
+        <p style="text-align:center; margin-top:8px">${new Date().toLocaleTimeString('ar-EG')}</p>
+        <script>setTimeout(() => { window.print(); }, 600); </script>
+      </body>
+      </html>
+    `);
+    win.document.close();
   }
 };
 
