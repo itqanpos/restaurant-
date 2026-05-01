@@ -206,3 +206,59 @@ function bindEvents() {
     }
   });
 }
+// =============================================
+// إدارة المحطات (Stations)
+// =============================================
+let stations = JSON.parse(localStorage.getItem('kitchenStations') || '[]');
+
+function renderStations() {
+  const container = document.getElementById('stationsList');
+  if (!container) return;
+  if (!stations.length) {
+    container.innerHTML = '<p class="text-gray-400">لم يتم إضافة محطات بعد. أضف محطة واربطها بالتصنيفات.</p>';
+    return;
+  }
+  container.innerHTML = stations.map((s, idx) => `
+    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+      <div class="flex-1">
+        <input type="text" value="${s.name}" placeholder="اسم المحطة" class="border rounded px-2 py-1 text-sm w-32" onchange="stations[${idx}].name=this.value; saveStations()">
+        <select multiple class="border rounded px-2 py-1 text-sm ml-2" style="min-width:150px" onchange="updateStationCats(${idx}, this)">
+          ${App.products.length ? [...new Set(App.products.map(p => p.category_id))].map(catId => {
+            const catName = App.products.find(p => p.category_id === catId)?.categories?.name || catId;
+            const selected = s.categories?.includes(catId) ? 'selected' : '';
+            return `<option value="${catId}" ${selected}>${catName}</option>`;
+          }).join('') : ''}
+        </select>
+      </div>
+      <button onclick="deleteStation(${idx})" class="text-red-500"><i class="fas fa-trash"></i></button>
+    </div>
+  `).join('');
+}
+
+function addStation() {
+  stations.push({ name: 'محطة جديدة', categories: [] });
+  saveStations();
+  renderStations();
+}
+
+function updateStationCats(index, select) {
+  const selected = Array.from(select.selectedOptions).map(o => o.value);
+  stations[index].categories = selected;
+  saveStations();
+}
+
+function deleteStation(index) {
+  stations.splice(index, 1);
+  saveStations();
+  renderStations();
+}
+
+function saveStations() {
+  localStorage.setItem('kitchenStations', JSON.stringify(stations));
+}
+
+// استدعاء عند فتح الإعدادات
+function initSettings() {
+  // ... باقي دوال الإعدادات ...
+  renderStations();
+}
