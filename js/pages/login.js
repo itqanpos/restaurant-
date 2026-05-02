@@ -1,6 +1,3 @@
-// استخدم window.supabase مباشرة
-const supabase = window.supabase;
-
 function initLogin() {
   App.hideUI();
 
@@ -46,7 +43,7 @@ function initLogin() {
     icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
   });
 
-  // ★★★ تسجيل الدخول (استخدم window.supabase مباشرة) ★★★
+  // تسجيل الدخول
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
@@ -66,7 +63,7 @@ function initLogin() {
     await App.finishLogin(data.user, data.session);
   });
 
-  // ★★★ إنشاء حساب (استخدم window.supabase مباشرة) ★★★
+  // إنشاء حساب
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fullName = document.getElementById('signupName').value.trim();
