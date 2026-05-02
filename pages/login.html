@@ -1,26 +1,47 @@
-<div class="min-h-full flex items-center justify-center">
-  <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
+<div class="min-h-full flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-700">
+  <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md mx-4">
     <div class="text-center mb-8">
       <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <i class="fas fa-utensils text-2xl text-indigo-600"></i>
       </div>
-      <h2 class="text-2xl font-bold text-gray-800">مطعم العائلة</h2>
-      <p class="text-gray-500 mt-2">نظام إدارة المطاعم</p>
+      <h2 class="text-2xl font-bold text-gray-800">نظام المطاعم</h2>
+      <p class="text-gray-500 mt-2">تسجيل الدخول أو إنشاء حساب</p>
     </div>
+
+    <!-- تبويبات -->
     <div class="flex mb-6 bg-gray-100 rounded-xl p-1">
-      <button id="tabLogin" class="flex-1 py-2 rounded-lg text-sm font-medium bg-white shadow">تسجيل الدخول</button>
-      <button id="tabSignup" class="flex-1 py-2 rounded-lg text-sm font-medium text-gray-500">إنشاء حساب</button>
+      <button id="tabLogin" class="flex-1 py-2 rounded-lg text-sm font-medium bg-white shadow">
+        تسجيل الدخول
+      </button>
+      <button id="tabSignup" class="flex-1 py-2 rounded-lg text-sm font-medium text-gray-500">
+        إنشاء حساب
+      </button>
     </div>
+
+    <!-- نموذج تسجيل الدخول -->
     <form id="loginForm" class="space-y-4">
-      <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required class="w-full border rounded-xl p-3">
-      <input type="password" id="loginPassword" placeholder="كلمة المرور" required class="w-full border rounded-xl p-3">
-      <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">دخول</button>
+      <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required
+        class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500">
+      <input type="password" id="loginPassword" placeholder="كلمة المرور" required
+        class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500">
+      <div id="loginError" class="text-red-500 text-sm hidden"></div>
+      <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">
+        دخول
+      </button>
     </form>
+
+    <!-- نموذج إنشاء حساب -->
     <form id="signupForm" class="space-y-4 hidden">
-      <input type="text" id="signupName" placeholder="الاسم الكامل" required class="w-full border rounded-xl p-3">
-      <input type="email" id="signupEmail" placeholder="البريد الإلكتروني" required class="w-full border rounded-xl p-3">
-      <input type="password" id="signupPassword" placeholder="كلمة المرور" required class="w-full border rounded-xl p-3">
-      <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold">إنشاء حساب</button>
+      <input type="text" id="signupName" placeholder="الاسم الكامل" required
+        class="w-full border rounded-xl p-3">
+      <input type="email" id="signupEmail" placeholder="البريد الإلكتروني" required
+        class="w-full border rounded-xl p-3">
+      <input type="password" id="signupPassword" placeholder="كلمة المرور (6+ أحرف)" required
+        class="w-full border rounded-xl p-3">
+      <div id="signupError" class="text-red-500 text-sm hidden"></div>
+      <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700">
+        إنشاء حساب
+      </button>
     </form>
   </div>
 </div>
