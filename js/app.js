@@ -1,16 +1,17 @@
 // =============================================
-// نظام المطاعم - Restaurant SaaS (v2.0 المراجع)
+// نظام المطاعم - Restaurant SaaS (v2.0 آمن)
 // =============================================
 
-// ★ 1. الاتصال بـ Supabase (بمجرد تحميل المكتبة)
 const SUPABASE_URL = 'https://xisosjmybqmuzveffhdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM';
+
+// تأسيس الاتصال
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true }
 });
 window.supabase = supabase;
 
-// ★ 2. طبقة Api (فورية)
+// ========== طبقة Api ==========
 window.Api = {
   products: {
     async getAll(restId) {
@@ -39,7 +40,7 @@ window.Api = {
   }
 };
 
-// ★ 3. كائن App (فوري)
+// ========== كائن التطبيق ==========
 window.App = {
   user: null, session: null, currentPage: 'home',
   language: localStorage.getItem('preferredLanguage') || 'ar',
@@ -61,7 +62,7 @@ window.App = {
     localStorage.setItem('preferredLanguage', this.language);
     document.documentElement.lang = this.language;
     document.documentElement.dir = this.language === 'ar' ? 'rtl' : 'ltr';
-    document.getElementById('langLabel').textContent = this.language === 'ar' ? 'English' : 'العربية';
+    document.getElementById('langLabel') && (document.getElementById('langLabel').textContent = this.language === 'ar' ? 'English' : 'العربية');
     this.loadPage(this.currentPage);
   },
 
@@ -80,34 +81,42 @@ window.App = {
       if (!resp.ok) throw new Error('ملف غير موجود');
       const html = await resp.text();
       container.innerHTML = html;
-
       const initFn = 'init' + page[0].toUpperCase() + page.slice(1);
       if (typeof window[initFn] === 'function') {
         try { await window[initFn](); } catch(e) { console.error(e); }
       }
     } catch (err) {
-      container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p class="px-6 text-gray-500">محتوى مؤقت...</p>`;
+      container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p>محتوى مؤقت...</p>`;
+    }
+  },
+
+  // ★ معالجة آمنة للجلسة
+  async checkSession() {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        this.user = data.session.user; this.session = data.session;
+        await this.loadTenantData(); // محمي داخلياً
+        this.showUI();
+        await this.loadPage('home');
+      } else {
+        this.hideUI();
+        await this.loadPage('login');
+      }
+    } catch (e) {
+      console.error('فشل فحص الجلسة:', e);
+      this.hideUI();
+      this.loadPage('login');
     }
   },
 
   async finishLogin(user, session) {
     this.user = user; this.session = session;
-    await this.loadTenantData();
+    try {
+      await this.loadTenantData();
+    } catch(e) { /* تجاهل أخطاء تحميل البيانات */ }
     this.showUI();
     await this.loadPage('home');
-  },
-
-  async checkSession() {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) {
-      this.user = data.session.user; this.session = data.session;
-      await this.loadTenantData();
-      this.showUI();
-      await this.loadPage('home');
-    } else {
-      this.hideUI();
-      await this.loadPage('login');
-    }
   },
 
   async loadTenantData() {
@@ -126,6 +135,7 @@ window.App = {
       }
     } catch (e) {
       this.user.role = 'admin'; this.products = []; this.inventory = [];
+      // لا نعيد الخطأ؛ نستمر مع بيانات فارغة
     }
   },
 
@@ -136,12 +146,12 @@ window.App = {
     await this.loadPage('login');
   },
 
+  // دوال السلة (نفسها)
   addToCart(id, name, price) {
     const existing = this.cart.find(i => i.id === id);
     existing ? existing.qty++ : this.cart.push({id, name, price, qty:1});
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
-
   changeQty(id, delta) {
     const item = this.cart.find(i => i.id === id);
     if (!item) return;
@@ -149,11 +159,12 @@ window.App = {
     if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
-
   clearCart() { this.cart = []; if (typeof updateCartDisplay === 'function') updateCartDisplay(); }
 };
 
-// ★ 4. بدء التطبيق (ينتظر DOM ليصبح جاهزاً)
-window.addEventListener('load', () => {
+// ★ بدء التشغيل الآمن
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
   App.checkSession();
-});
+} else {
+  document.addEventListener('DOMContentLoaded', () => App.checkSession());
+}
