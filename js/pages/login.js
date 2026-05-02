@@ -30,28 +30,18 @@ function initLogin() {
   });
 
   // إظهار/إخفاء كلمة المرور
-  document.getElementById('togglePassword')?.addEventListener('click', () => {
+  document.getElementById('togglePassword')?.addEventListener('click', function() {
     const inp = document.getElementById('loginPassword');
-    const icon = document.querySelector('#togglePassword i');
+    const icon = this.querySelector('i');
     inp.type = inp.type === 'password' ? 'text' : 'password';
     icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
   });
 
-  document.getElementById('toggleSignupPassword')?.addEventListener('click', () => {
+  document.getElementById('toggleSignupPassword')?.addEventListener('click', function() {
     const inp = document.getElementById('signupPassword');
-    const icon = document.querySelector('#toggleSignupPassword i');
+    const icon = this.querySelector('i');
     inp.type = inp.type === 'password' ? 'text' : 'password';
     icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
-  });
-
-  // نسيت كلمة المرور
-  document.getElementById('forgotLink')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    if (!email) return alert('أدخل بريدك الإلكتروني أولاً');
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) return alert(error.message);
-    alert('تم إرسال رابط الاستعادة إلى بريدك الإلكتروني');
   });
 
   // تسجيل الدخول
@@ -71,6 +61,7 @@ function initLogin() {
       return;
     }
 
+    // استدعاء finishLogin التي تعرض الشاشة الرئيسية
     await App.finishLogin(data.user, data.session);
   });
 
@@ -103,5 +94,15 @@ function initLogin() {
 
     alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
     tabLogin.click();
+  });
+
+  // نسيت كلمة المرور
+  document.getElementById('forgotLink')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) return alert('أدخل بريدك الإلكتروني أولاً');
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) return alert(error.message);
+    alert('تم إرسال رابط الاستعادة إلى بريدك الإلكتروني');
   });
 }
