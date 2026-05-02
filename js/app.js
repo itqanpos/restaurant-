@@ -1,8 +1,8 @@
 // =============================================
-// نظام المطاعم - Restaurant SaaS (v2.0)
+// نظام المطاعم - Restaurant SaaS (v2.0 المراجع)
 // =============================================
 
-// ★ تأسيس Supabase ★
+// ★ 1. الاتصال بـ Supabase (بمجرد تحميل المكتبة)
 const SUPABASE_URL = 'https://xisosjmybqmuzveffhdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -10,7 +10,7 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 window.supabase = supabase;
 
-// ★ طبقة Api (مباشرة) ★
+// ★ 2. طبقة Api (فورية)
 window.Api = {
   products: {
     async getAll(restId) {
@@ -39,10 +39,11 @@ window.Api = {
   }
 };
 
-// ★ كائن App (مباشر) ★
+// ★ 3. كائن App (فوري)
 window.App = {
   user: null, session: null, currentPage: 'home',
-  language: 'ar', currency: 'EGP', taxRate: 14,
+  language: localStorage.getItem('preferredLanguage') || 'ar',
+  currency: 'EGP', taxRate: 14,
   cart: [], products: [], inventory: [], restaurant: null, branch: null,
 
   formatCurrency(amount) { return Number(amount).toFixed(2) + ' ج.م'; },
@@ -55,8 +56,20 @@ window.App = {
     return (dict[this.language] && dict[this.language][key]) || key;
   },
 
+  toggleLanguage() {
+    this.language = this.language === 'ar' ? 'en' : 'ar';
+    localStorage.setItem('preferredLanguage', this.language);
+    document.documentElement.lang = this.language;
+    document.documentElement.dir = this.language === 'ar' ? 'rtl' : 'ltr';
+    document.getElementById('langLabel').textContent = this.language === 'ar' ? 'English' : 'العربية';
+    this.loadPage(this.currentPage);
+  },
+
   canAccess() { return true; },
   goHome() { this.loadPage('home'); },
+
+  showUI() { document.getElementById('appHeader').style.display = 'flex'; },
+  hideUI() { document.getElementById('appHeader').style.display = 'none'; },
 
   async loadPage(page) {
     document.getElementById('headerTitle').textContent = this.t(page);
@@ -77,13 +90,8 @@ window.App = {
     }
   },
 
-  showUI() { document.getElementById('appHeader').style.display = 'flex'; },
-  hideUI() { document.getElementById('appHeader').style.display = 'none'; },
-
-  // ★ دالة إنهاء تسجيل الدخول ★
   async finishLogin(user, session) {
-    this.user = user;
-    this.session = session;
+    this.user = user; this.session = session;
     await this.loadTenantData();
     this.showUI();
     await this.loadPage('home');
@@ -128,12 +136,12 @@ window.App = {
     await this.loadPage('login');
   },
 
-  // دوال السلة (سيتم ربطها لاحقاً)
   addToCart(id, name, price) {
     const existing = this.cart.find(i => i.id === id);
     existing ? existing.qty++ : this.cart.push({id, name, price, qty:1});
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
+
   changeQty(id, delta) {
     const item = this.cart.find(i => i.id === id);
     if (!item) return;
@@ -141,10 +149,11 @@ window.App = {
     if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
+
   clearCart() { this.cart = []; if (typeof updateCartDisplay === 'function') updateCartDisplay(); }
 };
 
-// بدء التطبيق بعد تحميل الصفحة
+// ★ 4. بدء التطبيق (ينتظر DOM ليصبح جاهزاً)
 window.addEventListener('load', () => {
   App.checkSession();
 });
