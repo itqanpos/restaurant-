@@ -216,7 +216,15 @@
     
     alert(`تم إضافة فرع "${name}" بنجاح`);
     closeBranchModal();
-    
+<div class="flex gap-4 mb-6">
+  <button onclick="App.toggleLanguage()" class="bg-gray-200 px-4 py-2 rounded-lg text-sm">
+    <i class="fas fa-globe"></i> تغيير اللغة
+  </button>
+  <button onclick="App.logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm">
+    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+  </button>
+</div>
+       
     // إضافة الفرع للقائمة (محاكاة)
     const list = document.getElementById('branchesList');
     const div = document.createElement('div');
