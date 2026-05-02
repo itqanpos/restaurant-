@@ -1,6 +1,22 @@
+// =============================================
+// نظام المطاعم - Restaurant SaaS
+// التطبيق الرئيسي (النسخة النهائية - بدون صلاحيات مؤقتًا)
+// =============================================
+
 const App = {
-  user: null, session: null, currentPage: 'home', language: 'ar', currency: 'EGP', taxRate: 14,
-  cart: [], products: [], inventory: [], kitchenOrders: [], restaurant: null, branch: null, appliedDiscount: null,
+  user: null,
+  session: null,
+  currentPage: 'home',
+  language: 'ar',
+  currency: 'EGP',
+  taxRate: 14,
+  cart: [],
+  products: [],
+  inventory: [],
+  kitchenOrders: [],
+  restaurant: null,
+  branch: null,
+  appliedDiscount: null,
 
   formatCurrency(amount) { return Number(amount).toFixed(2) + ' ج.م'; },
 
@@ -22,19 +38,23 @@ const App = {
   goHome() { this.loadPage('home'); },
 
   async loadPage(page) {
+    // تم تعطيل الصلاحيات مؤقتًا (كل المستخدمين يرون كل الصفحات)
     if (!this.canAccess(page)) {
       document.getElementById('pageContainer').innerHTML =
         '<div class="p-6 text-center text-red-500"><i class="fas fa-lock text-4xl mb-4"></i><p>ليس لديك صلاحية الوصول لهذه الصفحة</p></div>';
       return;
     }
+
     const container = document.getElementById('pageContainer');
     try {
       const response = await fetch(`pages/${page}.html`);
       if (!response.ok) throw new Error('ملف غير موجود');
       const html = await response.text();
       container.innerHTML = html;
+
       const existingBtn = document.getElementById('floatingHomeBtn');
       if (existingBtn) existingBtn.remove();
+
       if (page !== 'home') {
         const backBtn = document.createElement('button');
         backBtn.className = 'fixed bottom-6 left-6 bg-white shadow-lg rounded-full w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-200 z-30';
@@ -43,47 +63,50 @@ const App = {
         backBtn.id = 'floatingHomeBtn';
         document.body.appendChild(backBtn);
       }
+
       document.getElementById('headerTitle').textContent = this.t(page);
       this.currentPage = page;
-      const initFunc = 'init' + page.charAt(0).toUpperCase() + page.slice(1);
-      if (typeof window[initFunc] === 'function') window[initFunc]();
+      sessionStorage.setItem('lastPage', page);
+
+      const initFuncName = 'init' + page.charAt(0).toUpperCase() + page.slice(1);
+      if (typeof window[initFuncName] === 'function') {
+        window[initFuncName]();
+      }
     } catch (err) {
-      container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p>محتوى مؤقت...</p>`;
+      container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p class="px-6 text-gray-500">محتوى مؤقت...</p>`;
     }
   },
 
-  accessRules: {
-    admin: ['home','dashboard','pos','kitchen','products','inventory','reports','discounts','users','settings','qrmenu'],
-    manager: ['home','dashboard','pos','kitchen','products','inventory','reports','discounts','users','settings','qrmenu'],
-    cashier: ['home','dashboard','pos','kitchen'],
-    kitchen: ['home','dashboard','kitchen'],
-    inventory: ['home','dashboard','inventory'],
-    viewer: ['home','dashboard','reports']
-  },
-
+  // ★ تم تعطيل الصلاحيات تمامًا هنا ★
   canAccess(page) {
-    const role = this.user?.role || 'viewer';
-    const allowed = this.accessRules[role] || [];
-    return allowed.includes(page);
+    return true; // جميع الصفحات متاحة للجميع حاليًا
   },
 
   async finishLogin(user, session) {
-    this.user = user; this.session = session;
+    this.user = user;
+    this.session = session;
     await this.loadRestaurantData();
-    this.showUI(); this.loadPage('home');
+    this.showUI();
+    this.loadPage('home');
   },
 
   async checkSession() {
     const { data } = await window.supabase.auth.getSession();
     if (data.session) {
-      this.user = data.session.user; this.session = data.session;
+      this.user = data.session.user;
+      this.session = data.session;
       await this.loadRestaurantData();
-      this.showUI(); this.loadPage('home');
-    } else { this.hideUI(); this.loadPage('login'); }
+      this.showUI();
+      this.loadPage('home');
+    } else {
+      this.hideUI();
+      this.loadPage('login');
+    }
   },
 
   async loadRestaurantData() {
     if (!this.user) return;
+
     try {
       const { data, error } = await window.supabase
         .from('user_restaurant_roles')
@@ -93,20 +116,29 @@ const App = {
         .single();
 
       if (error) throw error;
+
       if (data) {
         this.restaurant = data.restaurants;
         this.branch = data.branches;
-        this.user.role = data.roles?.name || 'viewer';
-        try { this.products = await window.Api.getProducts(data.restaurant_id); } catch(e) { this.products = []; }
-        try { this.inventory = await window.Api.getInventory(data.restaurant_id); } catch(e) { this.inventory = []; }
+        this.user.role = data.roles?.name || 'admin';
+        try { this.products = await window.Api.getProducts(data.restaurant_id); } catch (e) { this.products = []; }
+        try { this.inventory = await window.Api.getInventory(data.restaurant_id); } catch (e) { this.inventory = []; }
       } else {
-        this.user.role = 'viewer';
-        this.restaurant = null; this.branch = null;
-        this.products = []; this.inventory = [];
+        // لا يوجد دور – نعطيه صلاحية admin فارغة ليتمكن من إضافة بياناته
+        this.user.role = 'admin';
+        this.restaurant = { id: null, name: 'مطعمي' };
+        this.branch = { id: null, name: 'الفرع الرئيسي' };
+        this.products = [];
+        this.inventory = [];
       }
     } catch (err) {
-      console.error('فشل تحميل بيانات المطعم:', err);
-      this.user.role = 'viewer';
+      console.warn('تعذر تحميل بيانات المطعم:', err.message);
+      // الوضع الآمن: يبقى admin ويستطيع استخدام التطبيق بدون بيانات
+      this.user.role = 'admin';
+      this.restaurant = { id: null, name: 'مطعمي' };
+      this.branch = { id: null, name: 'الفرع الرئيسي' };
+      this.products = [];
+      this.inventory = [];
     }
   },
 
@@ -115,36 +147,50 @@ const App = {
 
   async logout() {
     await window.supabase.auth.signOut();
-    this.user = null; this.session = null; this.cart = [];
-    this.appliedDiscount = null; this.loadPage('login');
+    this.user = null;
+    this.session = null;
+    this.cart = [];
+    this.appliedDiscount = null;
+    this.loadPage('login');
   },
 
-  addToCart(id, name, price, addons=[], notes='') {
-    const existing = this.cart.find(item => item.id === id && JSON.stringify(item.addons||[])===JSON.stringify(addons) && (item.notes||'')===notes);
-    existing ? existing.qty++ : this.cart.push({id, name, price, qty:1, addons, notes});
+  addToCart(id, name, price, addons = [], notes = '') {
+    const existing = this.cart.find(item => item.id === id && JSON.stringify(item.addons || []) === JSON.stringify(addons) && (item.notes || '') === notes);
+    if (existing) existing.qty++;
+    else this.cart.push({ id, name, price, qty: 1, addons, notes });
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
+
   changeQty(id, delta) {
-    const item = this.cart.find(i=>i.id===id);
-    if(!item) return;
+    const item = this.cart.find(i => i.id === id);
+    if (!item) return;
     item.qty += delta;
-    if(item.qty<=0) this.cart = this.cart.filter(i=>i.id!==id);
-    if(typeof updateCartDisplay==='function') updateCartDisplay();
+    if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
-  clearCart() { this.cart=[]; if(typeof updateCartDisplay==='function') updateCartDisplay(); },
+
+  clearCart() {
+    this.cart = [];
+    this.appliedDiscount = null;
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
+  },
+
   getCartTotals() {
-    const subtotal = this.cart.reduce((s,i)=>s+i.price*i.qty,0);
+    const subtotal = this.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
     let discount = 0;
-    if(this.appliedDiscount) discount = this.appliedDiscount.type==='percentage' ? subtotal*(this.appliedDiscount.value/100) : this.appliedDiscount.value;
-    return { subtotal, discount, total: Math.max(0,subtotal-discount) };
+    if (this.appliedDiscount) {
+      discount = this.appliedDiscount.type === 'percentage' ? subtotal * (this.appliedDiscount.value / 100) : this.appliedDiscount.value;
+    }
+    const total = Math.max(0, subtotal - discount);
+    return { subtotal, discount, total };
   },
 
   async placeOrder(orderType = 'dine_in', table = null, customer = {}, method = 'cash') {
     if (!this.cart.length) return;
     const { subtotal, discount, total } = this.getCartTotals();
     const order = {
-      restaurant_id: this.restaurant?.id,
-      branch_id: this.branch?.id,
+      restaurant_id: this.restaurant?.id || null,
+      branch_id: this.branch?.id || null,
       type: orderType,
       status: 'new',
       table_number: table,
@@ -171,22 +217,47 @@ const App = {
 
   dispatchToStations(order) {
     let stations = [];
-    try { stations = JSON.parse(localStorage.getItem('kitchenStations') || '[]'); } catch(e) {}
+    try { stations = JSON.parse(localStorage.getItem('kitchenStations') || '[]'); } catch (e) {}
     if (!stations.length) return;
-    const itemsWithCat = this.cart.map(ci => {
-      const prod = this.products.find(p => p.id == ci.id);
-      return { ...ci, categoryId: prod?.category_id || null };
+
+    const itemsWithCat = this.cart.map(cartItem => {
+      const product = this.products.find(p => p.id == cartItem.id);
+      return { ...cartItem, categoryId: product?.category_id || null };
     });
+
     stations.forEach(station => {
-      const stationItems = itemsWithCat.filter(i => station.categories?.includes(i.categoryId));
+      const stationItems = itemsWithCat.filter(item => station.categories?.includes(item.categoryId));
       if (stationItems.length > 0) this.printStationTicket(station.name, stationItems, order.order_number);
     });
   },
 
   printStationTicket(stationName, items, orderNumber) {
-    const win = window.open('', `station_${stationName}`, `width=400,height=500`);
+    const width = 400;
+    const height = 500;
+    const left = screen.width - width - 20;
+    const top = 100;
+    const win = window.open('', `station_${stationName}`, `width=${width},height=${height},left=${left},top=${top}`);
     if (!win) return;
-    win.document.write(`<html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:10px;font-size:14px}h3{text-align:center;margin-bottom:5px}.item{display:flex;justify-content:space-between;margin:4px 0}@media print{body{width:80mm}}</style></head><body><h3>${stationName} - طلب #${orderNumber}</h3><hr>${items.map(i => `<div class="item"><span>${i.name} x${i.qty}</span>${i.notes ? ' ('+i.notes+')' : ''}</div>`).join('')}<hr><p style="text-align:center;margin-top:8px">${new Date().toLocaleTimeString('ar-EG')}</p><script>setTimeout(()=>{window.print()},600)</script></body></html>`);
+    win.document.write(`
+      <html dir="rtl">
+      <head>
+        <style>
+          body { font-family: 'Tajawal', sans-serif; padding: 10px; font-size: 14px; }
+          h3 { text-align: center; margin-bottom: 5px; }
+          .item { display: flex; justify-content: space-between; margin: 4px 0; }
+          @media print { body { width: 80mm; } }
+        </style>
+      </head>
+      <body>
+        <h3>${stationName} - طلب #${orderNumber}</h3>
+        <hr>
+        ${items.map(i => `<div class="item"><span>${i.name} x${i.qty}</span>${i.notes ? ' (' + i.notes + ')' : ''}</div>`).join('')}
+        <hr>
+        <p style="text-align:center; margin-top:8px">${new Date().toLocaleTimeString('ar-EG')}</p>
+        <script>setTimeout(() => { window.print(); }, 600); </script>
+      </body>
+      </html>
+    `);
     win.document.close();
   }
 };
