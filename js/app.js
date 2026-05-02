@@ -1,3 +1,8 @@
+// =============================================
+// نظام المطاعم - Restaurant SaaS
+// التطبيق الرئيسي (النسخة النهائية الحقيقية)
+// =============================================
+
 const App = {
   user: null,
   session: null,
@@ -17,8 +22,8 @@ const App = {
 
   t(key) {
     const dict = {
-      ar: { dashboard:'الرئيسية', pos:'الكاشير', kitchen:'المطبخ', inventory:'المخزون', reports:'التقارير', discounts:'الخصومات', users:'المستخدمين', settings:'الإعدادات', qrmenu:'قائمة QR', login:'تسجيل الدخول', home:'الرئيسية' },
-      en: { dashboard:'Dashboard', pos:'POS', kitchen:'Kitchen', inventory:'Inventory', reports:'Reports', discounts:'Discounts', users:'Users', settings:'Settings', qrmenu:'QR Menu', login:'Login', home:'Home' }
+      ar: { dashboard: 'الرئيسية', pos: 'الكاشير', kitchen: 'المطبخ', inventory: 'المخزون', reports: 'التقارير', discounts: 'الخصومات', users: 'المستخدمين', settings: 'الإعدادات', qrmenu: 'قائمة QR', login: 'تسجيل الدخول', home: 'الرئيسية' },
+      en: { dashboard: 'Dashboard', pos: 'POS', kitchen: 'Kitchen', inventory: 'Inventory', reports: 'Reports', discounts: 'Discounts', users: 'Users', settings: 'Settings', qrmenu: 'QR Menu', login: 'Login', home: 'Home' }
     };
     return (dict[this.language] && dict[this.language][key]) || key;
   },
@@ -27,6 +32,7 @@ const App = {
     this.language = this.language === 'ar' ? 'en' : 'ar';
     document.documentElement.lang = this.language;
     document.documentElement.dir = this.language === 'ar' ? 'rtl' : 'ltr';
+    localStorage.setItem('preferredLanguage', this.language);
     this.loadPage(this.currentPage);
   },
 
@@ -34,17 +40,21 @@ const App = {
 
   async loadPage(page) {
     if (!this.canAccess(page)) {
-      document.getElementById('pageContainer').innerHTML = '<p class="text-red-500 p-6">غير مصرح</p>';
+      document.getElementById('pageContainer').innerHTML =
+        '<div class="p-6 text-center text-red-500"><i class="fas fa-lock text-4xl mb-4"></i><p>ليس لديك صلاحية الوصول لهذه الصفحة</p></div>';
       return;
     }
+
     const container = document.getElementById('pageContainer');
     try {
       const response = await fetch(`pages/${page}.html`);
       if (!response.ok) throw new Error('ملف غير موجود');
       const html = await response.text();
       container.innerHTML = html;
+
       const existingBtn = document.getElementById('floatingHomeBtn');
       if (existingBtn) existingBtn.remove();
+
       if (page !== 'home') {
         const backBtn = document.createElement('button');
         backBtn.className = 'fixed bottom-6 left-6 bg-white shadow-lg rounded-full w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-200 z-30';
@@ -53,28 +63,33 @@ const App = {
         backBtn.id = 'floatingHomeBtn';
         document.body.appendChild(backBtn);
       }
+
       document.getElementById('headerTitle').textContent = this.t(page);
       this.currentPage = page;
-      const initFunc = 'init' + page.charAt(0).toUpperCase() + page.slice(1);
-      if (typeof window[initFunc] === 'function') window[initFunc]();
+      sessionStorage.setItem('lastPage', page);
+
+      const initFuncName = 'init' + page.charAt(0).toUpperCase() + page.slice(1);
+      if (typeof window[initFuncName] === 'function') {
+        window[initFuncName]();
+      }
     } catch (err) {
-      container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p>محتوى مؤقت...</p>`;
+      container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p class="px-6 text-gray-500">محتوى مؤقت...</p>`;
     }
   },
 
   accessRules: {
-    admin: ['home','dashboard','pos','kitchen','products','inventory','reports','discounts','users','settings','qrmenu'],
-    manager: ['home','dashboard','pos','kitchen','products','inventory','reports','discounts','users','settings','qrmenu'],
-    cashier: ['home','dashboard','pos','kitchen'],
-    kitchen: ['home','dashboard','kitchen'],
-    inventory: ['home','dashboard','inventory'],
-    viewer: ['home','dashboard','reports']
+    admin: ['home', 'dashboard', 'pos', 'kitchen', 'products', 'inventory', 'reports', 'discounts', 'users', 'settings', 'qrmenu'],
+    manager: ['home', 'dashboard', 'pos', 'kitchen', 'products', 'inventory', 'reports', 'discounts', 'users', 'settings', 'qrmenu'],
+    cashier: ['home', 'dashboard', 'pos', 'kitchen'],
+    kitchen: ['home', 'dashboard', 'kitchen'],
+    inventory: ['home', 'dashboard', 'inventory'],
+    viewer: ['home', 'dashboard', 'reports']
   },
 
   canAccess(page) {
-    // صلاحية مؤقتة: اسمح بكل الصفحات أثناء التطوير
-    return true;
-    // للانتاج: const role = this.user?.role || 'viewer'; return (this.accessRules[role]||[]).includes(page);
+    const role = this.user?.role || 'viewer';
+    const allowed = this.accessRules[role] || [];
+    return allowed.includes(page);
   },
 
   async finishLogin(user, session) {
@@ -101,29 +116,38 @@ const App = {
 
   async loadRestaurantData() {
     if (!this.user) return;
+
     try {
-      const { data } = await window.supabase
+      const { data, error } = await window.supabase
         .from('user_restaurant_roles')
         .select('restaurant_id, restaurants(*), branches(*), roles(name)')
         .eq('user_id', this.user.id)
-        .limit(1)
-        .single();
-      if (data) {
-        this.restaurant = data.restaurants;
-        this.branch = data.branches;
-        this.user.role = data.roles?.name || 'admin';
-        try { this.products = await window.Api.getProducts(data.restaurant_id); } catch(e) {}
-        try { this.inventory = await window.Api.getInventory(data.restaurant_id); } catch(e) {}
+        .limit(1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const roleData = data[0];
+        this.restaurant = roleData.restaurants;
+        this.branch = roleData.branches;
+        this.user.role = roleData.roles?.name || 'viewer';
+        try { this.products = await window.Api.getProducts(roleData.restaurant_id); } catch (e) { this.products = []; }
+        try { this.inventory = await window.Api.getInventory(roleData.restaurant_id); } catch (e) { this.inventory = []; }
       } else {
-        // إنشاء بيانات افتراضية حتى يعمل التطبيق
-        this.user.role = 'admin';
-        this.restaurant = { id: 'default', name: 'مطعم تجريبي' };
-        this.branch = { id: 'default', name: 'الفرع الرئيسي' };
+        // لا يوجد صف في user_restaurant_roles
+        this.user.role = 'viewer';
+        this.restaurant = null;
+        this.branch = null;
+        this.products = [];
+        this.inventory = [];
       }
     } catch (err) {
-      this.user.role = 'admin';
-      this.restaurant = { id: 'default', name: 'مطعم تجريبي' };
-      this.branch = { id: 'default', name: 'الفرع الرئيسي' };
+      console.error('فشل تحميل بيانات المطعم:', err);
+      this.user.role = 'viewer';
+      this.restaurant = null;
+      this.branch = null;
+      this.products = [];
+      this.inventory = [];
     }
   },
 
@@ -132,34 +156,99 @@ const App = {
 
   async logout() {
     await window.supabase.auth.signOut();
-    this.user = null; this.cart = []; this.loadPage('login');
+    this.user = null;
+    this.session = null;
+    this.cart = [];
+    this.appliedDiscount = null;
+    this.loadPage('login');
   },
 
-  addToCart(id, name, price, addons=[], notes='') {
-    const existing = this.cart.find(item => item.id === id && JSON.stringify(item.addons||[])===JSON.stringify(addons) && (item.notes||'')===notes);
-    existing ? existing.qty++ : this.cart.push({id,name,price,qty:1,addons,notes});
+  // ---------- الكاشير ----------
+  addToCart(id, name, price, addons = [], notes = '') {
+    const existing = this.cart.find(item => item.id === id && JSON.stringify(item.addons || []) === JSON.stringify(addons) && (item.notes || '') === notes);
+    if (existing) existing.qty++;
+    else this.cart.push({ id, name, price, qty: 1, addons, notes });
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
+
   changeQty(id, delta) {
-    const item = this.cart.find(i=>i.id===id);
-    if(!item) return;
+    const item = this.cart.find(i => i.id === id);
+    if (!item) return;
     item.qty += delta;
-    if(item.qty<=0) this.cart = this.cart.filter(i=>i.id!==id);
-    if(typeof updateCartDisplay==='function') updateCartDisplay();
-  },
-  clearCart() { this.cart=[]; if(typeof updateCartDisplay==='function') updateCartDisplay(); },
-  getCartTotals() {
-    const subtotal = this.cart.reduce((s,i)=>s+i.price*i.qty,0);
-    let discount = 0;
-    if(this.appliedDiscount) discount = this.appliedDiscount.type==='percentage' ? subtotal*(this.appliedDiscount.value/100) : this.appliedDiscount.value;
-    return { subtotal, discount, total: Math.max(0,subtotal-discount) };
+    if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
 
-  async placeOrder(type, table, customer, method) {
-    if(!this.cart.length) return;
+  clearCart() {
+    this.cart = [];
+    this.appliedDiscount = null;
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
+  },
+
+  getCartTotals() {
+    const subtotal = this.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    let discount = 0;
+    if (this.appliedDiscount) {
+      discount = this.appliedDiscount.type === 'percentage' ? subtotal * (this.appliedDiscount.value / 100) : this.appliedDiscount.value;
+    }
+    const total = Math.max(0, subtotal - discount);
+    return { subtotal, discount, total };
+  },
+
+  async placeOrder(orderType = 'dine_in', table = null, customer = {}, method = 'cash') {
+    if (!this.cart.length) return;
     const { subtotal, discount, total } = this.getCartTotals();
-    alert(`طلب تجريبي (${method}) - الإجمالي: ${this.formatCurrency(total)}`);
-    this.clearCart();
+    const order = {
+      restaurant_id: this.restaurant?.id,
+      branch_id: this.branch?.id,
+      type: orderType,
+      status: 'new',
+      table_number: table,
+      customer_name: customer.name || null,
+      customer_phone: customer.phone || null,
+      delivery_address: customer.address || null,
+      notes: customer.notes || null,
+      subtotal,
+      discount_amount: discount,
+      total,
+      source: 'pos',
+      created_by: this.user?.id
+    };
+    try {
+      const newOrder = await window.Api.createOrder(order, this.cart.map(i => ({
+        product_id: i.id, name: i.name, price: i.price, quantity: i.qty,
+        notes: [i.addons?.join(', '), i.notes].filter(Boolean).join(' | ')
+      })));
+      this.dispatchToStations(newOrder);
+      alert(`تم الطلب #${newOrder.order_number} (${method})`);
+      this.clearCart();
+    } catch (e) {
+      alert('فشل إنشاء الطلب: ' + e.message);
+    }
+  },
+
+  dispatchToStations(order) {
+    let stations = [];
+    try { stations = JSON.parse(localStorage.getItem('kitchenStations') || '[]'); } catch (e) {}
+    if (!stations.length) return;
+    const itemsWithCat = this.cart.map(cartItem => {
+      const product = this.products.find(p => p.id == cartItem.id);
+      return { ...cartItem, categoryId: product?.category_id || null };
+    });
+    stations.forEach(station => {
+      const stationItems = itemsWithCat.filter(item => station.categories?.includes(item.categoryId));
+      if (stationItems.length > 0) {
+        this.printStationTicket(station.name, stationItems, order.order_number);
+      }
+    });
+  },
+
+  printStationTicket(stationName, items, orderNumber) {
+    const width = 400, height = 500, left = screen.width - width - 20, top = 100;
+    const win = window.open('', `station_${stationName}`, `width=${width},height=${height},left=${left},top=${top}`);
+    if (!win) return;
+    win.document.write(`<html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:10px;font-size:14px}h3{text-align:center;margin-bottom:5px}.item{display:flex;justify-content:space-between;margin:4px 0}@media print{body{width:80mm}}</style></head><body><h3>${stationName} - طلب #${orderNumber}</h3><hr>${items.map(i => `<div class="item"><span>${i.name} x${i.qty}</span>${i.notes ? ' (' + i.notes + ')' : ''}</div>`).join('')}<hr><p style="text-align:center;margin-top:8px">${new Date().toLocaleTimeString('ar-EG')}</p><script>setTimeout(()=>{window.print()},600)</script></body></html>`);
+    win.document.close();
   }
 };
 
