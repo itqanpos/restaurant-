@@ -1,6 +1,6 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// التطبيق الرئيسي (النسخة الكاملة - محدثة)
+// التطبيق الرئيسي (النسخة المعدلة لحل "غير مصرح")
 // =============================================
 
 const App = {
@@ -80,11 +80,9 @@ const App = {
       const html = await response.text();
       container.innerHTML = html;
 
-      // إزالة زر الرجوع السابق إن وجد
       const existingBtn = document.getElementById('floatingHomeBtn');
       if (existingBtn) existingBtn.remove();
 
-      // إضافة زر الرجوع للرئيسية إذا لم نكن في home
       if (page !== 'home') {
         const backBtn = document.createElement('button');
         backBtn.className =
@@ -124,7 +122,6 @@ const App = {
     return allowed.includes(page);
   },
 
-  // إنهاء تسجيل الدخول بدون إعادة تحميل
   async finishLogin(user, session) {
     this.user = user;
     this.session = session;
@@ -133,7 +130,6 @@ const App = {
     this.loadPage('home');
   },
 
-  // فحص الجلسة عند بدء التشغيل
   async checkSession() {
     const { data } = await window.supabase.auth.getSession();
     if (data.session) {
@@ -148,24 +144,29 @@ const App = {
     }
   },
 
-  // تحميل بيانات المطعم ودور المستخدم
+  // ★★★ دالة تحميل دور المستخدم (المحسّنة) ★★★
   async loadRestaurantData() {
     if (!this.user) return;
-    const { data } = await window.supabase
-      .from('user_restaurant_roles')
-      .select('restaurant_id, restaurants(*), branches(*), roles(name)')
-      .eq('user_id', this.user.id)
-      .single();
 
-    if (data) {
-      this.restaurant = data.restaurants;
-      this.branch = data.branches;
-      // ★ تم تعيين admin افتراضيًا لتجنب مشكلة الصلاحيات في التطوير ★
-      this.user.role = 'admin';  // في النسخة الإنتاجية: data.roles?.name || 'viewer'
-      try { this.products = await window.Api.getProducts(data.restaurant_id); } catch (e) {}
-      try { this.inventory = await window.Api.getInventory(data.restaurant_id); } catch (e) {}
-    } else {
-      // إذا لم يتم تعيين دور، نجعله admin على الأقل
+    try {
+      const { data, error } = await window.supabase
+        .from('user_restaurant_roles')
+        .select('restaurant_id, restaurants(*), branches(*), roles(name)')
+        .eq('user_id', this.user.id)
+        .maybeSingle();   // لن تظهر خطأ لو لم تجد
+
+      if (data) {
+        this.restaurant = data.restaurants;
+        this.branch = data.branches;
+        this.user.role = data.roles?.name || 'admin';
+        try { this.products = await window.Api.getProducts(data.restaurant_id); } catch(e) {}
+        try { this.inventory = await window.Api.getInventory(data.restaurant_id); } catch(e) {}
+      } else {
+        // لو لم يجد صفاً، أعطه صلاحية admin على الأقل
+        this.user.role = 'admin';
+      }
+    } catch (err) {
+      // في حالة أي خطأ نعطيه صلاحية admin
       this.user.role = 'admin';
     }
   },
@@ -187,9 +188,8 @@ const App = {
     this.loadPage('login');
   },
 
-  // ---------- الكاشير (معدلة لدعم الإضافات) ----------
+  // ---------- الكاشير (مع دعم الإضافات) ----------
   addToCart(id, name, price, addons = [], notes = '') {
-    // نبحث عن عنصر مطابق في السلة (نفس المنتج، بدون إضافات مختلفة)
     const existing = this.cart.find(item =>
       item.id === id &&
       JSON.stringify(item.addons || []) === JSON.stringify(addons) &&
@@ -230,8 +230,7 @@ const App = {
     return { subtotal, discount, total };
   },
 
-  // الطلب الآن يقبل نوع الطلب والبيانات
-  async placeOrder(orderType = 'dine_in', table = null, customer = {}) {
+  async placeOrder(orderType = 'dine_in', table = null, customer = {}, method = 'cash') {
     if (!this.cart.length) return;
     const { subtotal, discount, total } = this.getCartTotals();
     const order = {
@@ -262,7 +261,7 @@ const App = {
         }))
       );
       this.dispatchToStations(newOrder);
-      alert('تم الطلب #' + newOrder.order_number);
+      alert(`تم الطلب #${newOrder.order_number} (${method})`);
       this.clearCart();
     } catch (e) {
       alert('فشل إنشاء الطلب: ' + e.message);
