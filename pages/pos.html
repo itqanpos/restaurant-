@@ -1,15 +1,15 @@
 <div class="flex h-full -m-6">
-  <!-- منطقة المنتجات مع التصنيفات -->
+  <!-- منطقة المنتجات والتصنيفات -->
   <div class="flex-1 flex flex-col p-6">
-    <!-- صف أزرار نوع الطلب -->
-    <div class="flex gap-2 mb-3 flex-wrap">
-      <button id="btnDineIn" class="order-type-btn bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+    <!-- أزرار نوع الطلب -->
+    <div class="flex gap-2 mb-3">
+      <button id="btnDineIn" class="order-type-btn bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
         <i class="fas fa-utensils"></i> داخل المطعم
       </button>
-      <button id="btnTakeaway" class="order-type-btn bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-100 transition">
+      <button id="btnTakeaway" class="order-type-btn bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm">
         <i class="fas fa-shopping-bag"></i> تيك أواي
       </button>
-      <button id="btnDelivery" class="order-type-btn bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-100 transition">
+      <button id="btnDelivery" class="order-type-btn bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm">
         <i class="fas fa-motorcycle"></i> دليفري
       </button>
     </div>
@@ -18,17 +18,17 @@
     <div id="categoryFilters" class="flex gap-2 mb-4 flex-wrap"></div>
 
     <!-- شبكة المنتجات -->
-    <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
+    <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
   </div>
 
-  <!-- سلة المشتريات (جانب يمين) -->
+  <!-- سلة المشتريات -->
   <div class="w-80 lg:w-96 bg-white border-r flex flex-col shadow-lg">
     <div class="p-4 border-b font-bold text-lg flex justify-between items-center">
       <span>الطلب الحالي</span>
-      <button onclick="App.clearCart()" class="text-red-500 text-sm"><i class="fas fa-trash"></i></button>
+      <button onclick="clearCart()" class="text-red-500 text-sm"><i class="fas fa-trash"></i></button>
     </div>
 
-    <!-- بيانات العميل / الطاولة المختارة -->
+    <!-- بيانات العميل / الطاولة -->
     <div id="orderInfoBar" class="px-4 py-2 bg-gray-50 border-b text-sm text-gray-600"></div>
 
     <!-- عناصر السلة -->
@@ -48,10 +48,20 @@
           <i class="fas fa-history"></i> استرجاع
         </button>
       </div>
-      <button id="placeOrderBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mt-2">إتمام الطلب</button>
+
+      <!-- أزرار الدفع -->
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        <button id="payCashBtn" class="bg-green-600 text-white p-2 rounded-lg text-sm font-medium">F1 نقداً</button>
+        <button id="payVisaBtn" class="bg-blue-600 text-white p-2 rounded-lg text-sm font-medium">F2 فيزا</button>
+        <button id="payWalletBtn" class="bg-purple-600 text-white p-2 rounded-lg text-sm font-medium">F3 محفظة</button>
+      </div>
+
+      <button id="splitBillBtn" class="w-full bg-gray-200 py-2 rounded-lg text-sm mt-2">
+        <i class="fas fa-divide"></i> تقسيم الفاتورة
+      </button>
     </div>
   </div>
 </div>
 
-<!-- المودالات (ستُنشأ ديناميكياً في pos.js) -->
+<!-- حاوية النوافذ المنبثقة (مودال) -->
 <div id="posModalsContainer"></div>
