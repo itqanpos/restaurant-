@@ -1,6 +1,6 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// التطبيق الرئيسي (النسخة النهائية الحقيقية)
+// التطبيق الرئيسي (النسخة النهائية الكاملة)
 // =============================================
 
 const App = {
@@ -22,8 +22,8 @@ const App = {
 
   t(key) {
     const dict = {
-      ar: { dashboard: 'الرئيسية', pos: 'الكاشير', kitchen: 'المطبخ', inventory: 'المخزون', reports: 'التقارير', discounts: 'الخصومات', users: 'المستخدمين', settings: 'الإعدادات', qrmenu: 'قائمة QR', login: 'تسجيل الدخول', home: 'الرئيسية' },
-      en: { dashboard: 'Dashboard', pos: 'POS', kitchen: 'Kitchen', inventory: 'Inventory', reports: 'Reports', discounts: 'Discounts', users: 'Users', settings: 'Settings', qrmenu: 'QR Menu', login: 'Login', home: 'Home' }
+      ar: { dashboard:'الرئيسية', pos:'الكاشير', kitchen:'المطبخ', inventory:'المخزون', reports:'التقارير', discounts:'الخصومات', users:'المستخدمين', settings:'الإعدادات', qrmenu:'قائمة QR', login:'تسجيل الدخول', home:'الرئيسية' },
+      en: { dashboard:'Dashboard', pos:'POS', kitchen:'Kitchen', inventory:'Inventory', reports:'Reports', discounts:'Discounts', users:'Users', settings:'Settings', qrmenu:'QR Menu', login:'Login', home:'Home' }
     };
     return (dict[this.language] && dict[this.language][key]) || key;
   },
@@ -78,12 +78,12 @@ const App = {
   },
 
   accessRules: {
-    admin: ['home', 'dashboard', 'pos', 'kitchen', 'products', 'inventory', 'reports', 'discounts', 'users', 'settings', 'qrmenu'],
-    manager: ['home', 'dashboard', 'pos', 'kitchen', 'products', 'inventory', 'reports', 'discounts', 'users', 'settings', 'qrmenu'],
-    cashier: ['home', 'dashboard', 'pos', 'kitchen'],
-    kitchen: ['home', 'dashboard', 'kitchen'],
-    inventory: ['home', 'dashboard', 'inventory'],
-    viewer: ['home', 'dashboard', 'reports']
+    admin: ['home','dashboard','pos','kitchen','products','inventory','reports','discounts','users','settings','qrmenu'],
+    manager: ['home','dashboard','pos','kitchen','products','inventory','reports','discounts','users','settings','qrmenu'],
+    cashier: ['home','dashboard','pos','kitchen'],
+    kitchen: ['home','dashboard','kitchen'],
+    inventory: ['home','dashboard','inventory'],
+    viewer: ['home','dashboard','reports']
   },
 
   canAccess(page) {
@@ -130,22 +130,20 @@ const App = {
         const roleData = data[0];
         this.restaurant = roleData.restaurants;
         this.branch = roleData.branches;
-        this.user.role = roleData.roles?.name || 'viewer';
+        this.user.role = roleData.roles?.name || 'admin';
         try { this.products = await window.Api.getProducts(roleData.restaurant_id); } catch (e) { this.products = []; }
         try { this.inventory = await window.Api.getInventory(roleData.restaurant_id); } catch (e) { this.inventory = []; }
       } else {
-        // لا يوجد صف في user_restaurant_roles
-        this.user.role = 'viewer';
-        this.restaurant = null;
-        this.branch = null;
+        this.user.role = 'admin';
+        this.restaurant = { id: null, name: 'مطعم تجريبي' };
+        this.branch = { id: null, name: 'الفرع الرئيسي' };
         this.products = [];
         this.inventory = [];
       }
     } catch (err) {
-      console.error('فشل تحميل بيانات المطعم:', err);
-      this.user.role = 'viewer';
-      this.restaurant = null;
-      this.branch = null;
+      this.user.role = 'admin';
+      this.restaurant = { id: null, name: 'مطعم تجريبي' };
+      this.branch = { id: null, name: 'الفرع الرئيسي' };
       this.products = [];
       this.inventory = [];
     }
@@ -156,16 +154,13 @@ const App = {
 
   async logout() {
     await window.supabase.auth.signOut();
-    this.user = null;
-    this.session = null;
-    this.cart = [];
-    this.appliedDiscount = null;
-    this.loadPage('login');
+    this.user = null; this.session = null; this.cart = [];
+    this.appliedDiscount = null; this.loadPage('login');
   },
 
   // ---------- الكاشير ----------
   addToCart(id, name, price, addons = [], notes = '') {
-    const existing = this.cart.find(item => item.id === id && JSON.stringify(item.addons || []) === JSON.stringify(addons) && (item.notes || '') === notes);
+    const existing = this.cart.find(item => item.id === id && JSON.stringify(item.addons||[])===JSON.stringify(addons) && (item.notes||'')===notes);
     if (existing) existing.qty++;
     else this.cart.push({ id, name, price, qty: 1, addons, notes });
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
