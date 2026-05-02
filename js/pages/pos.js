@@ -2,26 +2,41 @@
 let currentOrderType = 'dine_in';
 let selectedTable = null;
 let selectedCustomer = { name: '', phone: '', address: '', notes: '' };
+let heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
 
 async function initPOS() {
   if (!App.products.length && App.restaurant) {
     App.products = await window.Api.getProducts(App.restaurant.id);
   }
 
-  // إعداد أزرار نوع الطلب
+  // أزرار نوع الطلب
   document.getElementById('btnDineIn').addEventListener('click', () => setOrderType('dine_in'));
   document.getElementById('btnTakeaway').addEventListener('click', () => setOrderType('takeaway'));
   document.getElementById('btnDelivery').addEventListener('click', () => setOrderType('delivery'));
 
-  // التصنيفات والمنتجات
-  renderCategories();
-  renderProducts();
-  updateCartDisplay();
+  // أزرار الدفع
+  document.getElementById('payCashBtn').addEventListener('click', () => App.placeOrder(currentOrderType, selectedTable, selectedCustomer, 'cash'));
+  document.getElementById('payVisaBtn').addEventListener('click', () => App.placeOrder(currentOrderType, selectedTable, selectedCustomer, 'visa'));
+  document.getElementById('payWalletBtn').addEventListener('click', () => App.placeOrder(currentOrderType, selectedTable, selectedCustomer, 'wallet'));
 
-  // أزرار التعليق والاسترجاع
+  // تعليق واسترجاع
   document.getElementById('holdOrderBtn').addEventListener('click', holdOrder);
   document.getElementById('recallOrderBtn').addEventListener('click', recallOrder);
-  document.getElementById('placeOrderBtn').addEventListener('click', () => App.placeOrder(currentOrderType, selectedTable, selectedCustomer));
+  
+  // تقسيم الفاتورة
+  document.getElementById('splitBillBtn').addEventListener('click', openSplitBillModal);
+
+  renderCategories();
+  renderProducts('all');
+  updateCartDisplay();
+
+  // اختصارات لوحة المفاتيح
+  document.addEventListener('keydown', (e) => {
+    if (App.currentPage !== 'pos') return;
+    if (e.key === 'F1') { e.preventDefault(); App.placeOrder(currentOrderType, selectedTable, selectedCustomer, 'cash'); }
+    else if (e.key === 'F2') { e.preventDefault(); App.placeOrder(currentOrderType, selectedTable, selectedCustomer, 'visa'); }
+    else if (e.key === 'F3') { e.preventDefault(); App.placeOrder(currentOrderType, selectedTable, selectedCustomer, 'wallet'); }
+  });
 }
 
 function setOrderType(type) {
@@ -29,7 +44,7 @@ function setOrderType(type) {
   // تحديث أنماط الأزرار
   document.querySelectorAll('.order-type-btn').forEach(b => {
     b.classList.remove('bg-indigo-600', 'text-white', 'border', 'border-gray-300');
-    b.classList.add('border', 'border-gray-300', 'bg-white');
+    b.classList.add('bg-white', 'border', 'border-gray-300');
   });
   const activeBtn = document.getElementById('btn' + type.charAt(0).toUpperCase() + type.slice(1).replace('_', ''));
   activeBtn.classList.add('bg-indigo-600', 'text-white');
@@ -75,7 +90,7 @@ function openTableModal() {
   });
 }
 
-// ---- مودال معلومات العميل (تيك أواي / دليفري) ----
+// ---- مودال معلومات العميل ----
 function openCustomerModal(orderType) {
   const modal = document.createElement('div');
   modal.className = 'modal';
@@ -106,7 +121,7 @@ function openCustomerModal(orderType) {
   });
 }
 
-// ---- عرض المنتجات مع الصور والتصنيفات ----
+// ---- عرض المنتجات (مع التصنيفات والصور) ----
 function renderCategories() {
   const cats = [...new Set(App.products.map(p => p.category_id))];
   const container = document.getElementById('categoryFilters');
@@ -125,20 +140,20 @@ function renderCategories() {
 }
 
 function renderProducts(category = 'all') {
+  const grid = document.getElementById('productGrid');
   let filtered = App.products;
   if (category !== 'all') filtered = filtered.filter(p => p.category_id == category);
-  const grid = document.getElementById('productGrid');
   grid.innerHTML = filtered.map(p => `
-    <div class="product-card bg-white rounded-xl shadow-sm p-3 cursor-pointer hover:shadow-md hover:border-indigo-300 border-2 border-transparent transition relative"
-         onclick="openAddonModal('${p.id}', '${p.name}', ${p.price}, '${p.image_url || ''}')">
-      ${p.image_url ? `<img src="${p.image_url}" class="w-full h-24 object-cover rounded-lg mb-2">` : ''}
+    <div class="product-card bg-white rounded-xl shadow-sm p-3 cursor-pointer hover:shadow-md border-2 border-transparent hover:border-indigo-400 transition relative"
+         onclick="openAddonModal('${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.price}, '${p.image_url || ''}')">
+      ${p.image_url ? `<img src="${p.image_url}" class="w-full h-24 object-cover rounded-lg mb-2" alt="${p.name}">` : ''}
       <div class="font-bold text-sm">${p.name}</div>
-      <div class="text-green-600 font-bold">${App.formatCurrency(p.price)}</div>
+      <div class="text-green-600 font-bold mt-1">${App.formatCurrency(p.price)}</div>
     </div>
   `).join('');
 }
 
-// ---- مودال الإضافات والملاحظات للمنتج ----
+// ---- مودال الإضافات والملاحظات ----
 function openAddonModal(productId, productName, productPrice, imageUrl) {
   const modal = document.createElement('div');
   modal.className = 'modal';
@@ -150,7 +165,6 @@ function openAddonModal(productId, productName, productPrice, imageUrl) {
         <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="صوص"> إضافة صوص</label>
         <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="جبنة"> إضافة جبنة</label>
         <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="بدون جبنة"> بدون جبنة</label>
-        <!-- يمكنك إضافة إضافات أخرى هنا -->
       </div>
       <textarea id="itemNotes" class="form-input mt-3" placeholder="ملاحظات إضافية"></textarea>
       <div class="flex justify-end gap-2 mt-4">
@@ -169,20 +183,18 @@ function openAddonModal(productId, productName, productPrice, imageUrl) {
   });
 }
 
-// ---- تعليق الفاتورة (حفظ في localStorage) ----
+// ---- تعليق واسترجاع الفاتورة ----
 function holdOrder() {
   if (App.cart.length === 0) return alert('السلة فارغة');
-  const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
-  const newHeld = {
+  heldOrders.push({
     id: Date.now(),
     type: currentOrderType,
     table: selectedTable,
     customer: {...selectedCustomer},
-    cart: App.cart,
+    cart: JSON.parse(JSON.stringify(App.cart)),
     appliedDiscount: App.appliedDiscount,
     time: new Date().toLocaleString('ar-EG')
-  };
-  heldOrders.push(newHeld);
+  });
   localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
   App.clearCart();
   document.getElementById('orderInfoBar').innerText = '';
@@ -192,15 +204,12 @@ function holdOrder() {
 }
 
 function recallOrder() {
-  const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
   if (!heldOrders.length) return alert('لا توجد فواتير معلقة');
-  
-  // عرض قائمة للاسترجاع
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-content">
-      <h3 class="font-bold mb-4">استرجاع فاتورة معلقة</h3>
+      <h3 class="font-bold mb-4">استرجاع فاتورة</h3>
       <div class="space-y-2 max-h-60 overflow-y-auto">
         ${heldOrders.map((order, idx) => `
           <div class="p-2 bg-gray-50 rounded cursor-pointer hover:bg-indigo-50" data-idx="${idx}">
@@ -219,16 +228,13 @@ function recallOrder() {
     div.addEventListener('click', () => {
       const idx = parseInt(div.dataset.idx);
       const restored = heldOrders[idx];
-      // استعادة الحالة
       currentOrderType = restored.type;
       selectedTable = restored.table;
       selectedCustomer = restored.customer;
       App.cart = restored.cart;
       App.appliedDiscount = restored.appliedDiscount;
-      // حذف من المعلقة
       heldOrders.splice(idx, 1);
       localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
-      // تحديث الواجهة
       updateCartDisplay();
       document.getElementById('orderInfoBar').innerText = restored.type === 'dine_in' ? `طاولة: ${restored.table}` : `العميل: ${restored.customer?.name || ''}`;
       modal.remove();
@@ -236,11 +242,37 @@ function recallOrder() {
   });
 }
 
-// تحديث عرض السلة (معدل)
+// ---- تقسيم الفاتورة ----
+function openSplitBillModal() {
+  if (App.cart.length === 0) return alert('السلة فارغة');
+  const { total } = App.getCartTotals();
+  const perPerson = total / 2;
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="font-bold mb-4">تقسيم الفاتورة</h3>
+      <p>الإجمالي: ${App.formatCurrency(total)}</p>
+      <input type="number" id="splitCount" value="2" min="2" class="border p-2 rounded w-full mt-2">
+      <p class="mt-2 text-green-600 font-bold">كل شخص: <span id="perPerson">${App.formatCurrency(perPerson)}</span></p>
+      <div class="flex gap-2 mt-4">
+        <button class="flex-1 bg-gray-200 py-2 rounded" onclick="this.closest('.modal').remove()">إلغاء</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('posModalsContainer').appendChild(modal);
+  modal.querySelector('#splitCount').addEventListener('input', (e) => {
+    const count = parseInt(e.target.value) || 1;
+    document.getElementById('perPerson').textContent = App.formatCurrency(total / count);
+  });
+  modal.querySelector('.bg-gray-200').addEventListener('click', () => modal.remove());
+}
+
+// ---- تحديث عرض السلة (مطلوب من app.js) ----
 window.updateCartDisplay = function() {
-  // ... (نفس الكود السابق مع إظهار الإضافات)
   const container = document.getElementById('cartItems');
   if (!container) return;
+  
   if (!App.cart.length) {
     container.innerHTML = '<p class="text-gray-400 text-center mt-6">السلة فارغة</p>';
     document.getElementById('posSubtotal').textContent = '0.00 ج.م';
@@ -248,6 +280,7 @@ window.updateCartDisplay = function() {
     document.getElementById('posTotal').textContent = '0.00 ج.م';
     return;
   }
+
   container.innerHTML = App.cart.map(item => `
     <div class="flex justify-between items-start bg-gray-50 p-2 rounded-lg">
       <div class="flex-1">
@@ -263,9 +296,16 @@ window.updateCartDisplay = function() {
       </div>
     </div>
   `).join('');
+
   const { subtotal, discount, total } = App.getCartTotals();
   const tax = total * 0.14;
   document.getElementById('posSubtotal').textContent = App.formatCurrency(subtotal);
   document.getElementById('posTax').textContent = App.formatCurrency(tax);
   document.getElementById('posTotal').textContent = App.formatCurrency(total + tax);
 };
+
+// دالة مسح السلة (للاستخدام من HTML)
+function clearCart() {
+  App.clearCart();
+  updateCartDisplay();
+}
