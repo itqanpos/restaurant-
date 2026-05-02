@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>نظام المطاعم - Restaurant SaaS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -20,16 +20,35 @@
 
   <header id="appHeader" class="bg-white shadow-sm px-6 py-4 flex items-center justify-between hidden">
     <h1 class="text-xl font-bold" id="headerTitle">الرئيسية</h1>
-    <button onclick="App.logout()" class="text-red-500"><i class="fas fa-sign-out-alt"></i></button>
+    <div class="flex items-center gap-3">
+      <button onclick="App.toggleLanguage()" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">
+        <i class="fas fa-globe"></i> <span id="langLabel">English</span>
+      </button>
+      <button onclick="App.logout()" class="text-red-500"><i class="fas fa-sign-out-alt"></i></button>
+    </div>
   </header>
 
   <main id="pageContainer" class="flex-1 overflow-y-auto" style="height: calc(100vh - 64px);"></main>
 
-  <!-- المكتبات الأساسية تُحمل أولاً -->
+  <!-- 1. المكتبات -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-  <!-- التطبيق الرئيسي (ينتظر تحميل DOM) -->
+  <!-- 2. التطبيق الأساسي (يُعرِّف window.Api و window.App) -->
   <script src="js/app.js"></script>
+
+  <!-- 3. ملفات الصفحات (تُحمّل بعد app.js) -->
+  <script src="js/pages/login.js"></script>
+  <script src="js/pages/home.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/pos.js"></script>
+  <script src="js/pages/kitchen.js"></script>
+  <script src="js/pages/products.js"></script>
+  <script src="js/pages/inventory.js"></script>
+  <script src="js/pages/reports.js"></script>
+  <script src="js/pages/discounts.js"></script>
+  <script src="js/pages/users.js"></script>
+  <script src="js/pages/settings.js"></script>
+  <script src="js/pages/qrmenu.js"></script>
 </body>
 </html>
