@@ -1,10 +1,7 @@
 // =============================================
 // نظام المطاعم - v2.0 النهائي
 // =============================================
-
-// ★ انتظر حتى يجهز DOM ومكتبة Supabase ★
 document.addEventListener('DOMContentLoaded', async () => {
-  // التحقق من وجود Supabase
   if (!window.supabase) {
     document.getElementById('pageContainer').innerHTML = '<p class="p-6 text-red-500">Supabase غير محمل</p>';
     return;
@@ -13,12 +10,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const SUPABASE_URL = 'https://xisosjmybqmuzveffhdb.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM';
   
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      persistSession: true,        // ★ تفعيل تذكر الجلسة تلقائياً
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
   window.supabase = supabase;
 
-  console.log('✅ Supabase جاهز');
-
-  // ========== تعريف Api ==========
+  // ========== طبقة Api بسيطة ==========
   window.Api = {
     products: {
       async getAll(restId) {
@@ -36,8 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       async create(orderData, items) {
         const { data: order } = await supabase.from('orders').insert(orderData).select().single();
         if (order && items.length) {
-          const orderItems = items.map(item => ({ ...item, order_id: order.id }));
-          await supabase.from('order_items').insert(orderItems);
+          await supabase.from('order_items').insert(items.map(i => ({ ...i, order_id: order.id })));
         }
         return order;
       }
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // ========== تعريف App ==========
+  // ========== كائن App ==========
   window.App = {
     user: null, session: null, currentPage: 'home',
     language: 'ar', currency: 'EGP', taxRate: 14,
@@ -67,7 +67,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     },
 
     canAccess() { return true; },
-
     goHome() { this.loadPage('home'); },
 
     async loadPage(page) {
@@ -80,7 +79,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const html = await resp.text();
         container.innerHTML = html;
 
-        // استدعاء دالة التهيئة إن وجدت، بدون توقف التطبيق عند الخطأ
         const initFn = 'init' + page[0].toUpperCase() + page.slice(1);
         if (typeof window[initFn] === 'function') {
           try { await window[initFn](); } catch(e) { console.error(e); }
@@ -90,16 +88,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     },
 
+    showUI() { document.getElementById('appHeader').style.display = 'flex'; },
+    hideUI() { document.getElementById('appHeader').style.display = 'none'; },
+
+    // ★ دالة إنهاء تسجيل الدخول (تُستدعى من login.js)
+    async finishLogin(user, session) {
+      this.user = user;
+      this.session = session;
+      await this.loadTenantData();
+      this.showUI();
+      await this.loadPage('home');
+    },
+
     async checkSession() {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         this.user = data.session.user; this.session = data.session;
         await this.loadTenantData();
-        document.getElementById('appHeader').style.display = 'flex';
-        this.loadPage('home');
+        this.showUI();
+        await this.loadPage('home');
       } else {
-        document.getElementById('appHeader').style.display = 'none';
-        this.loadPage('login');
+        this.hideUI();
+        await this.loadPage('login');
       }
     },
 
@@ -125,16 +135,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     async logout() {
       await supabase.auth.signOut();
       this.user = null; this.cart = [];
-      document.getElementById('appHeader').style.display = 'none';
-      this.loadPage('login');
+      this.hideUI();
+      await this.loadPage('login');
     },
 
+    // دوال السلة
     addToCart(id, name, price) {
       const existing = this.cart.find(i => i.id === id);
       existing ? existing.qty++ : this.cart.push({id, name, price, qty:1});
       if (typeof updateCartDisplay === 'function') updateCartDisplay();
     },
-
     changeQty(id, delta) {
       const item = this.cart.find(i => i.id === id);
       if (!item) return;
@@ -142,7 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
       if (typeof updateCartDisplay === 'function') updateCartDisplay();
     },
-
     clearCart() { this.cart = []; if (typeof updateCartDisplay === 'function') updateCartDisplay(); },
 
     async placeOrder(paymentMethod = 'cash') {
