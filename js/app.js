@@ -1,22 +1,6 @@
-// =============================================
-// نظام المطاعم - Restaurant SaaS
-// التطبيق الرئيسي (النسخة النهائية الكاملة)
-// =============================================
-
 const App = {
-  user: null,
-  session: null,
-  currentPage: 'home',
-  language: 'ar',
-  currency: 'EGP',
-  taxRate: 14,
-  cart: [],
-  products: [],
-  inventory: [],
-  kitchenOrders: [],
-  restaurant: null,
-  branch: null,
-  appliedDiscount: null,
+  user: null, session: null, currentPage: 'home', language: 'ar', currency: 'EGP', taxRate: 14,
+  cart: [], products: [], inventory: [], kitchenOrders: [], restaurant: null, branch: null, appliedDiscount: null,
 
   formatCurrency(amount) { return Number(amount).toFixed(2) + ' ج.م'; },
 
@@ -32,7 +16,6 @@ const App = {
     this.language = this.language === 'ar' ? 'en' : 'ar';
     document.documentElement.lang = this.language;
     document.documentElement.dir = this.language === 'ar' ? 'rtl' : 'ltr';
-    localStorage.setItem('preferredLanguage', this.language);
     this.loadPage(this.currentPage);
   },
 
@@ -44,17 +27,14 @@ const App = {
         '<div class="p-6 text-center text-red-500"><i class="fas fa-lock text-4xl mb-4"></i><p>ليس لديك صلاحية الوصول لهذه الصفحة</p></div>';
       return;
     }
-
     const container = document.getElementById('pageContainer');
     try {
       const response = await fetch(`pages/${page}.html`);
       if (!response.ok) throw new Error('ملف غير موجود');
       const html = await response.text();
       container.innerHTML = html;
-
       const existingBtn = document.getElementById('floatingHomeBtn');
       if (existingBtn) existingBtn.remove();
-
       if (page !== 'home') {
         const backBtn = document.createElement('button');
         backBtn.className = 'fixed bottom-6 left-6 bg-white shadow-lg rounded-full w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-200 z-30';
@@ -63,17 +43,12 @@ const App = {
         backBtn.id = 'floatingHomeBtn';
         document.body.appendChild(backBtn);
       }
-
       document.getElementById('headerTitle').textContent = this.t(page);
       this.currentPage = page;
-      sessionStorage.setItem('lastPage', page);
-
-      const initFuncName = 'init' + page.charAt(0).toUpperCase() + page.slice(1);
-      if (typeof window[initFuncName] === 'function') {
-        window[initFuncName]();
-      }
+      const initFunc = 'init' + page.charAt(0).toUpperCase() + page.slice(1);
+      if (typeof window[initFunc] === 'function') window[initFunc]();
     } catch (err) {
-      container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p class="px-6 text-gray-500">محتوى مؤقت...</p>`;
+      container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p>محتوى مؤقت...</p>`;
     }
   },
 
@@ -93,59 +68,45 @@ const App = {
   },
 
   async finishLogin(user, session) {
-    this.user = user;
-    this.session = session;
+    this.user = user; this.session = session;
     await this.loadRestaurantData();
-    this.showUI();
-    this.loadPage('home');
+    this.showUI(); this.loadPage('home');
   },
 
   async checkSession() {
     const { data } = await window.supabase.auth.getSession();
     if (data.session) {
-      this.user = data.session.user;
-      this.session = data.session;
+      this.user = data.session.user; this.session = data.session;
       await this.loadRestaurantData();
-      this.showUI();
-      this.loadPage('home');
-    } else {
-      this.hideUI();
-      this.loadPage('login');
-    }
+      this.showUI(); this.loadPage('home');
+    } else { this.hideUI(); this.loadPage('login'); }
   },
 
   async loadRestaurantData() {
     if (!this.user) return;
-
     try {
       const { data, error } = await window.supabase
         .from('user_restaurant_roles')
         .select('restaurant_id, restaurants(*), branches(*), roles(name)')
         .eq('user_id', this.user.id)
-        .limit(1);
+        .limit(1)
+        .single();
 
       if (error) throw error;
-
-      if (data && data.length > 0) {
-        const roleData = data[0];
-        this.restaurant = roleData.restaurants;
-        this.branch = roleData.branches;
-        this.user.role = roleData.roles?.name || 'admin';
-        try { this.products = await window.Api.getProducts(roleData.restaurant_id); } catch (e) { this.products = []; }
-        try { this.inventory = await window.Api.getInventory(roleData.restaurant_id); } catch (e) { this.inventory = []; }
+      if (data) {
+        this.restaurant = data.restaurants;
+        this.branch = data.branches;
+        this.user.role = data.roles?.name || 'viewer';
+        try { this.products = await window.Api.getProducts(data.restaurant_id); } catch(e) { this.products = []; }
+        try { this.inventory = await window.Api.getInventory(data.restaurant_id); } catch(e) { this.inventory = []; }
       } else {
-        this.user.role = 'admin';
-        this.restaurant = { id: null, name: 'مطعم تجريبي' };
-        this.branch = { id: null, name: 'الفرع الرئيسي' };
-        this.products = [];
-        this.inventory = [];
+        this.user.role = 'viewer';
+        this.restaurant = null; this.branch = null;
+        this.products = []; this.inventory = [];
       }
     } catch (err) {
-      this.user.role = 'admin';
-      this.restaurant = { id: null, name: 'مطعم تجريبي' };
-      this.branch = { id: null, name: 'الفرع الرئيسي' };
-      this.products = [];
-      this.inventory = [];
+      console.error('فشل تحميل بيانات المطعم:', err);
+      this.user.role = 'viewer';
     }
   },
 
@@ -158,36 +119,24 @@ const App = {
     this.appliedDiscount = null; this.loadPage('login');
   },
 
-  // ---------- الكاشير ----------
-  addToCart(id, name, price, addons = [], notes = '') {
+  addToCart(id, name, price, addons=[], notes='') {
     const existing = this.cart.find(item => item.id === id && JSON.stringify(item.addons||[])===JSON.stringify(addons) && (item.notes||'')===notes);
-    if (existing) existing.qty++;
-    else this.cart.push({ id, name, price, qty: 1, addons, notes });
+    existing ? existing.qty++ : this.cart.push({id, name, price, qty:1, addons, notes});
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
-
   changeQty(id, delta) {
-    const item = this.cart.find(i => i.id === id);
-    if (!item) return;
+    const item = this.cart.find(i=>i.id===id);
+    if(!item) return;
     item.qty += delta;
-    if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
+    if(item.qty<=0) this.cart = this.cart.filter(i=>i.id!==id);
+    if(typeof updateCartDisplay==='function') updateCartDisplay();
   },
-
-  clearCart() {
-    this.cart = [];
-    this.appliedDiscount = null;
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
-  },
-
+  clearCart() { this.cart=[]; if(typeof updateCartDisplay==='function') updateCartDisplay(); },
   getCartTotals() {
-    const subtotal = this.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const subtotal = this.cart.reduce((s,i)=>s+i.price*i.qty,0);
     let discount = 0;
-    if (this.appliedDiscount) {
-      discount = this.appliedDiscount.type === 'percentage' ? subtotal * (this.appliedDiscount.value / 100) : this.appliedDiscount.value;
-    }
-    const total = Math.max(0, subtotal - discount);
-    return { subtotal, discount, total };
+    if(this.appliedDiscount) discount = this.appliedDiscount.type==='percentage' ? subtotal*(this.appliedDiscount.value/100) : this.appliedDiscount.value;
+    return { subtotal, discount, total: Math.max(0,subtotal-discount) };
   },
 
   async placeOrder(orderType = 'dine_in', table = null, customer = {}, method = 'cash') {
@@ -215,34 +164,29 @@ const App = {
         notes: [i.addons?.join(', '), i.notes].filter(Boolean).join(' | ')
       })));
       this.dispatchToStations(newOrder);
-      alert(`تم الطلب #${newOrder.order_number} (${method})`);
+      alert(`تم الطلب #${newOrder.order_number} - الدفع ${method}`);
       this.clearCart();
-    } catch (e) {
-      alert('فشل إنشاء الطلب: ' + e.message);
-    }
+    } catch (e) { alert('فشل إنشاء الطلب: ' + e.message); }
   },
 
   dispatchToStations(order) {
     let stations = [];
-    try { stations = JSON.parse(localStorage.getItem('kitchenStations') || '[]'); } catch (e) {}
+    try { stations = JSON.parse(localStorage.getItem('kitchenStations') || '[]'); } catch(e) {}
     if (!stations.length) return;
-    const itemsWithCat = this.cart.map(cartItem => {
-      const product = this.products.find(p => p.id == cartItem.id);
-      return { ...cartItem, categoryId: product?.category_id || null };
+    const itemsWithCat = this.cart.map(ci => {
+      const prod = this.products.find(p => p.id == ci.id);
+      return { ...ci, categoryId: prod?.category_id || null };
     });
     stations.forEach(station => {
-      const stationItems = itemsWithCat.filter(item => station.categories?.includes(item.categoryId));
-      if (stationItems.length > 0) {
-        this.printStationTicket(station.name, stationItems, order.order_number);
-      }
+      const stationItems = itemsWithCat.filter(i => station.categories?.includes(i.categoryId));
+      if (stationItems.length > 0) this.printStationTicket(station.name, stationItems, order.order_number);
     });
   },
 
   printStationTicket(stationName, items, orderNumber) {
-    const width = 400, height = 500, left = screen.width - width - 20, top = 100;
-    const win = window.open('', `station_${stationName}`, `width=${width},height=${height},left=${left},top=${top}`);
+    const win = window.open('', `station_${stationName}`, `width=400,height=500`);
     if (!win) return;
-    win.document.write(`<html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:10px;font-size:14px}h3{text-align:center;margin-bottom:5px}.item{display:flex;justify-content:space-between;margin:4px 0}@media print{body{width:80mm}}</style></head><body><h3>${stationName} - طلب #${orderNumber}</h3><hr>${items.map(i => `<div class="item"><span>${i.name} x${i.qty}</span>${i.notes ? ' (' + i.notes + ')' : ''}</div>`).join('')}<hr><p style="text-align:center;margin-top:8px">${new Date().toLocaleTimeString('ar-EG')}</p><script>setTimeout(()=>{window.print()},600)</script></body></html>`);
+    win.document.write(`<html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:10px;font-size:14px}h3{text-align:center;margin-bottom:5px}.item{display:flex;justify-content:space-between;margin:4px 0}@media print{body{width:80mm}}</style></head><body><h3>${stationName} - طلب #${orderNumber}</h3><hr>${items.map(i => `<div class="item"><span>${i.name} x${i.qty}</span>${i.notes ? ' ('+i.notes+')' : ''}</div>`).join('')}<hr><p style="text-align:center;margin-top:8px">${new Date().toLocaleTimeString('ar-EG')}</p><script>setTimeout(()=>{window.print()},600)</script></body></html>`);
     win.document.close();
   }
 };
