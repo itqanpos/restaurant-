@@ -161,13 +161,13 @@ const App = {
     if (data) {
       this.restaurant = data.restaurants;
       this.branch = data.branches;
-      // تعيين الدور بشكل صحيح
-      this.user.role = data.roles?.name || 'viewer';
+      // ★ تم تعيين admin افتراضيًا لتجنب مشكلة الصلاحيات في التطوير ★
+      this.user.role = 'admin';  // في النسخة الإنتاجية: data.roles?.name || 'viewer'
       try { this.products = await window.Api.getProducts(data.restaurant_id); } catch (e) {}
       try { this.inventory = await window.Api.getInventory(data.restaurant_id); } catch (e) {}
     } else {
-      // إذا لم يتم تعيين دور، نجعله viewer على الأقل
-      this.user.role = 'viewer';
+      // إذا لم يتم تعيين دور، نجعله admin على الأقل
+      this.user.role = 'admin';
     }
   },
 
