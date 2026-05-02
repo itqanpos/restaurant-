@@ -11,16 +11,18 @@ function initHome() {
     { id: 'discounts', icon: 'tags', label: 'الخصومات', color: 'bg-pink-50 text-pink-700 border-pink-200' },
     { id: 'users', icon: 'users', label: 'المستخدمين', color: 'bg-teal-50 text-teal-700 border-teal-200' },
     { id: 'settings', icon: 'cog', label: 'الإعدادات', color: 'bg-gray-50 text-gray-700 border-gray-300' },
-    { id: 'qrmenu', icon: 'qrcode', label: 'QR Menu', color: 'bg-sky-50 text-sky-700 border-sky-200' }
+    { id: 'qrmenu', icon: 'qrcode', label: 'قائمة QR', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+    { id: 'loyalty', icon: 'star', label: 'الولاء', color: 'bg-amber-50 text-amber-700 border-amber-200' }
   ];
 
+  // فلترة الصفحات حسب الصلاحية (حالياً الكل يرى الجميع)
   const allowed = pages.filter(p => App.canAccess(p.id));
 
   grid.innerHTML = allowed.map(p => `
     <div onclick="App.loadPage('${p.id}')" 
          class="rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border ${p.color} flex flex-col items-center justify-center text-center hover:-translate-y-1 duration-200">
       <div class="w-14 h-14 rounded-full bg-white shadow-sm flex items-center justify-center mb-4">
-        <i class="fas fa-${p.icon} text-2xl" style="color: currentColor;"></i>
+        <i class="fas fa-${p.icon} text-2xl"></i>
       </div>
       <h3 class="font-bold text-base">${p.label}</h3>
     </div>
