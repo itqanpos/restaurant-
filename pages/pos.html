@@ -1,61 +1,57 @@
 <div class="flex h-full -m-6">
-  <!-- منطقة المنتجات (اليسار) -->
+  <!-- منطقة المنتجات مع التصنيفات -->
   <div class="flex-1 flex flex-col p-6">
-    <!-- الصف الأول: الإعدادات والبحث -->
-    <div class="flex flex-wrap gap-2 mb-4">
-      <select id="posOrderType" class="border rounded-lg p-2 text-sm">
-        <option value="dine_in">داخل المطعم</option>
-        <option value="takeaway">تيك أواي</option>
-        <option value="delivery">دليفري</option>
-      </select>
-      <input type="text" id="posTable" placeholder="رقم الطاولة" class="border rounded-lg p-2 w-24 text-sm">
-      <input type="text" id="posCustomer" placeholder="اسم العميل" class="border rounded-lg p-2 flex-1 min-w-[150px] text-sm">
-      <input type="text" id="posSearch" placeholder="بحث عن منتج..." class="border rounded-lg p-2 w-40 text-sm">
+    <!-- صف أزرار نوع الطلب -->
+    <div class="flex gap-2 mb-3 flex-wrap">
+      <button id="btnDineIn" class="order-type-btn bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+        <i class="fas fa-utensils"></i> داخل المطعم
+      </button>
+      <button id="btnTakeaway" class="order-type-btn bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-100 transition">
+        <i class="fas fa-shopping-bag"></i> تيك أواي
+      </button>
+      <button id="btnDelivery" class="order-type-btn bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-100 transition">
+        <i class="fas fa-motorcycle"></i> دليفري
+      </button>
     </div>
 
-    <!-- صف التصنيفات -->
+    <!-- شريط التصنيفات -->
     <div id="categoryFilters" class="flex gap-2 mb-4 flex-wrap"></div>
 
     <!-- شبكة المنتجات -->
     <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
   </div>
 
-  <!-- سلة المشتريات (اليمين) -->
-  <div class="w-96 bg-white border-r flex flex-col shadow-lg">
-    <div class="p-4 border-b font-bold text-lg flex justify-between">
+  <!-- سلة المشتريات (جانب يمين) -->
+  <div class="w-80 lg:w-96 bg-white border-r flex flex-col shadow-lg">
+    <div class="p-4 border-b font-bold text-lg flex justify-between items-center">
       <span>الطلب الحالي</span>
       <button onclick="App.clearCart()" class="text-red-500 text-sm"><i class="fas fa-trash"></i></button>
     </div>
 
+    <!-- بيانات العميل / الطاولة المختارة -->
+    <div id="orderInfoBar" class="px-4 py-2 bg-gray-50 border-b text-sm text-gray-600"></div>
+
     <!-- عناصر السلة -->
     <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
 
-    <!-- كود الخصم -->
-    <div class="px-4 py-2 border-t flex gap-2">
-      <input type="text" id="discountCode" placeholder="كود الخصم" class="flex-1 border rounded-lg p-2 text-sm">
-      <button id="applyDiscountBtn" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">تطبيق</button>
-    </div>
-
-    <!-- ملخص المبالغ -->
-    <div class="p-4 border-t bg-gray-50 space-y-2 text-sm">
-      <div class="flex justify-between"><span>المجموع الفرعي</span><span id="posSubtotal">0.00 ج.م</span></div>
-      <div class="flex justify-between text-red-500" id="discountRow" style="display:none"><span>الخصم</span><span id="posDiscount">0.00 ج.م</span></div>
-      <div class="flex justify-between"><span>الضريبة (14%)</span><span id="posTax">0.00 ج.م</span></div>
-      <div class="flex justify-between font-bold text-lg border-t pt-2"><span>الإجمالي</span><span id="posTotal">0.00 ج.م</span></div>
-    </div>
-
-    <!-- أزرار الدفع والإجراءات -->
+    <!-- ملخص وأزرار -->
     <div class="p-4 border-t bg-gray-50 space-y-2">
-      <div class="grid grid-cols-3 gap-2">
-        <button class="pay-btn bg-green-600 text-white p-2 rounded-lg" data-method="cash">نقداً</button>
-        <button class="pay-btn bg-blue-600 text-white p-2 rounded-lg" data-method="visa">فيزا</button>
-        <button class="pay-btn bg-purple-600 text-white p-2 rounded-lg" data-method="wallet">محفظة</button>
+      <div class="flex justify-between text-sm"><span>المجموع</span><span id="posSubtotal">0.00 ج.م</span></div>
+      <div class="flex justify-between text-sm"><span>الضريبة (14%)</span><span id="posTax">0.00 ج.م</span></div>
+      <div class="flex justify-between font-bold text-lg"><span>الإجمالي</span><span id="posTotal">0.00 ج.م</span></div>
+
+      <div class="flex gap-2 mt-3">
+        <button id="holdOrderBtn" class="flex-1 bg-yellow-100 text-yellow-800 py-2 rounded-lg text-sm hover:bg-yellow-200">
+          <i class="fas fa-pause"></i> تعليق
+        </button>
+        <button id="recallOrderBtn" class="flex-1 bg-blue-100 text-blue-800 py-2 rounded-lg text-sm hover:bg-blue-200">
+          <i class="fas fa-history"></i> استرجاع
+        </button>
       </div>
-      <button id="splitBillBtn" class="w-full bg-gray-200 py-2 rounded-lg text-sm">تقسيم الفاتورة</button>
+      <button id="placeOrderBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mt-2">إتمام الطلب</button>
     </div>
   </div>
 </div>
-<!-- داخل قسم الأزرار بعد أزرار الدفع -->
-<button id="printBillBtn" class="w-full bg-gray-200 py-2 rounded-lg text-sm mt-2">
-  <i class="fas fa-print"></i> طباعة الفاتورة
-</button>
+
+<!-- المودالات (ستُنشأ ديناميكياً في pos.js) -->
+<div id="posModalsContainer"></div>
