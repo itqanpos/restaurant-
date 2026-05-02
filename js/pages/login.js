@@ -1,3 +1,6 @@
+// استخدم window.supabase مباشرة
+const supabase = window.supabase;
+
 function initLogin() {
   App.hideUI();
 
@@ -10,7 +13,6 @@ function initLogin() {
 
   if (!tabLogin || !tabSignup || !loginForm || !signupForm) return;
 
-  // تبديل التبويبات
   tabLogin.addEventListener('click', () => {
     tabLogin.classList.add('bg-white', 'shadow');
     tabSignup.classList.remove('bg-white', 'shadow');
@@ -44,7 +46,7 @@ function initLogin() {
     icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
   });
 
-  // تسجيل الدخول
+  // ★★★ تسجيل الدخول (استخدم window.supabase مباشرة) ★★★
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
@@ -52,7 +54,7 @@ function initLogin() {
 
     loginError.classList.add('hidden');
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
     if (error) {
       loginError.textContent = error.message.includes('Invalid login')
         ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
@@ -61,11 +63,10 @@ function initLogin() {
       return;
     }
 
-    // استدعاء finishLogin التي تعرض الشاشة الرئيسية
     await App.finishLogin(data.user, data.session);
   });
 
-  // إنشاء حساب
+  // ★★★ إنشاء حساب (استخدم window.supabase مباشرة) ★★★
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fullName = document.getElementById('signupName').value.trim();
@@ -80,7 +81,7 @@ function initLogin() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await window.supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } }
@@ -101,7 +102,7 @@ function initLogin() {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
     if (!email) return alert('أدخل بريدك الإلكتروني أولاً');
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await window.supabase.auth.resetPasswordForEmail(email);
     if (error) return alert(error.message);
     alert('تم إرسال رابط الاستعادة إلى بريدك الإلكتروني');
   });
