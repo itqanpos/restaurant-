@@ -1,6 +1,6 @@
 // =============================================
 // نظام المطاعم - Restaurant SaaS
-// التطبيق الرئيسي (النسخة الكاملة والمعدلة)
+// التطبيق الرئيسي (النسخة الكاملة - محدثة)
 // =============================================
 
 const App = {
@@ -67,7 +67,6 @@ const App = {
   },
 
   async loadPage(page) {
-    // التحقق من الصلاحية
     if (!this.canAccess(page)) {
       document.getElementById('pageContainer').innerHTML =
         '<p class="text-red-500 p-6">غير مصرح</p>';
@@ -188,13 +187,18 @@ const App = {
     this.loadPage('login');
   },
 
-  // الكاشير
-  addToCart(id, name, price) {
-    const existing = this.cart.find(item => item.id === id);
+  // ---------- الكاشير (معدلة لدعم الإضافات) ----------
+  addToCart(id, name, price, addons = [], notes = '') {
+    // نبحث عن عنصر مطابق في السلة (نفس المنتج، بدون إضافات مختلفة)
+    const existing = this.cart.find(item =>
+      item.id === id &&
+      JSON.stringify(item.addons || []) === JSON.stringify(addons) &&
+      (item.notes || '') === notes
+    );
     if (existing) {
       existing.qty++;
     } else {
-      this.cart.push({ id, name, price, qty: 1 });
+      this.cart.push({ id, name, price, qty: 1, addons, notes });
     }
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
   },
@@ -226,14 +230,20 @@ const App = {
     return { subtotal, discount, total };
   },
 
-  async placeOrder() {
+  // الطلب الآن يقبل نوع الطلب والبيانات
+  async placeOrder(orderType = 'dine_in', table = null, customer = {}) {
     if (!this.cart.length) return;
     const { subtotal, discount, total } = this.getCartTotals();
     const order = {
       restaurant_id: this.restaurant?.id,
       branch_id: this.branch?.id,
-      type: document.getElementById('posOrderType')?.value || 'dine_in',
+      type: orderType,
       status: 'new',
+      table_number: table,
+      customer_name: customer.name || null,
+      customer_phone: customer.phone || null,
+      delivery_address: customer.address || null,
+      notes: customer.notes || null,
       subtotal,
       discount_amount: discount,
       total,
@@ -248,7 +258,7 @@ const App = {
           name: i.name,
           price: i.price,
           quantity: i.qty,
-          notes: i.notes || ''
+          notes: [i.addons?.join(', '), i.notes].filter(Boolean).join(' | ')
         }))
       );
       this.dispatchToStations(newOrder);
