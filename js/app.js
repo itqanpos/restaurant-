@@ -1,8 +1,8 @@
 // =============================================
-// نظام المطاعم - Restaurant SaaS (نهائي)
+// نظام المطاعم - النواة الأساسية (ثابت)
 // =============================================
 
-// ★ 1. تأسيس Supabase
+// 1. تأسيس Supabase
 const SUPABASE_URL = 'https://xisosjmybqmuzveffhdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM';
 
@@ -11,7 +11,7 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 window.supabase = supabase;
 
-// ★ 2. طبقة Api
+// 2. طبقة Api (ثابتة)
 window.Api = {
   products: {
     async getAll(restId) {
@@ -28,17 +28,11 @@ window.Api = {
   orders: {
     async create(orderData, items) {
       const { data: order } = await supabase.from('orders').insert(orderData).select().single();
-      if (order && items.length) {
-        await supabase.from('order_items').insert(items.map(i => ({ ...i, order_id: order.id })));
-      }
+      if (order && items.length) await supabase.from('order_items').insert(items.map(i => ({ ...i, order_id: order.id })));
       return order;
     }
   },
   discounts: {
-    async getAll(restId) {
-      const { data } = await supabase.from('discounts').select('*').eq('restaurant_id', restId).eq('is_active', true);
-      return data || [];
-    },
     async validate(code, restId) {
       const { data } = await supabase.from('discounts').select('*').eq('code', code).eq('restaurant_id', restId).eq('is_active', true).single();
       if (!data) return null;
@@ -51,16 +45,12 @@ window.Api = {
   }
 };
 
-// ★ 3. كائن App
+// 3. كائن App الأساسي (ثابت)
 window.App = {
   user: null, session: null, currentPage: 'home',
   language: localStorage.getItem('preferredLanguage') || 'ar',
   currency: 'EGP', taxRate: 14,
   cart: [], products: [], inventory: [], restaurant: null, branch: null,
-  appliedDiscount: null,
-  orderType: 'dine_in',
-  table: null,
-  customer: {},
 
   formatCurrency(amount) { return Number(amount).toFixed(2) + ' ج.م'; },
 
@@ -85,18 +75,11 @@ window.App = {
   canAccess() { return true; },
   goHome() { this.loadPage('home'); },
 
-  showUI() {
-    const header = document.getElementById('appHeader');
-    if (header) header.style.display = 'flex';
-  },
-  hideUI() {
-    const header = document.getElementById('appHeader');
-    if (header) header.style.display = 'none';
-  },
+  showUI() { const h = document.getElementById('appHeader'); if (h) h.style.display = 'flex'; },
+  hideUI() { const h = document.getElementById('appHeader'); if (h) h.style.display = 'none'; },
 
   async loadPage(page) {
-    const titleEl = document.getElementById('headerTitle');
-    if (titleEl) titleEl.textContent = this.t(page);
+    const title = document.getElementById('headerTitle'); if (title) title.textContent = this.t(page);
     this.currentPage = page;
     const container = document.getElementById('pageContainer');
     if (!container) return;
@@ -116,8 +99,7 @@ window.App = {
 
   async checkSession() {
     try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
+      const { data } = await supabase.auth.getSession();
       if (data.session) {
         this.user = data.session.user; this.session = data.session;
         await this.loadTenantData();
@@ -128,7 +110,6 @@ window.App = {
         await this.loadPage('login');
       }
     } catch (e) {
-      console.error('خطأ في الجلسة:', e);
       this.hideUI();
       await this.loadPage('login');
     }
@@ -165,88 +146,12 @@ window.App = {
     this.user = null; this.cart = [];
     this.hideUI();
     await this.loadPage('login');
-  },
-
-  // دوال السلة
-  addToCart(id, name, price, addons = [], notes = '') {
-    const existing = this.cart.find(item =>
-      item.id === id &&
-      JSON.stringify(item.addons || []) === JSON.stringify(addons) &&
-      (item.notes || '') === notes
-    );
-    if (existing) existing.qty++;
-    else this.cart.push({ id, name, price, qty: 1, addons, notes });
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
-  },
-
-  changeQty(id, delta) {
-    const item = this.cart.find(i => i.id === id);
-    if (!item) return;
-    item.qty += delta;
-    if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
-  },
-
-  clearCart() {
-    this.cart = [];
-    this.appliedDiscount = null;
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
-  },
-
-  getCartTotals() {
-    const subtotal = this.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-    let discount = 0;
-    if (this.appliedDiscount) {
-      discount = this.appliedDiscount.type === 'percentage'
-        ? subtotal * (this.appliedDiscount.value / 100)
-        : this.appliedDiscount.value;
-    }
-    const total = Math.max(0, subtotal - discount);
-    return { subtotal, discount, total };
-  },
-
-  async placeOrder(paymentMethod = 'cash') {
-    if (!this.cart.length) return;
-    const { subtotal, discount, total } = this.getCartTotals();
-    const tax = total * (this.taxRate / 100);
-
-    const order = {
-      restaurant_id: this.restaurant?.id,
-      branch_id: this.branch?.id,
-      type: this.orderType,
-      status: 'new',
-      table_number: this.table,
-      customer_name: this.customer.name,
-      customer_phone: this.customer.phone,
-      delivery_address: this.customer.address,
-      notes: this.customer.notes,
-      subtotal,
-      discount_amount: discount,
-      tax_amount: tax,
-      total: total + tax,
-      source: 'pos',
-      created_by: this.user?.id
-    };
-
-    try {
-      const newOrder = await window.Api.orders.create(order, this.cart.map(i => ({
-        product_id: i.id,
-        name: i.name,
-        price: i.price,
-        quantity: i.qty,
-        notes: [i.addons?.join(', '), i.notes].filter(Boolean).join(' | ')
-      })));
-      alert(`✅ تم الطلب #${newOrder.order_number} - الدفع ${paymentMethod}`);
-      this.clearCart();
-    } catch (e) {
-      alert('فشل الطلب: ' + e.message);
-    }
   }
 };
 
-// ★ 4. بدء التطبيق بعد تحميل الصفحة
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  window.App.checkSession();
+// بدء التشغيل الآمن
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.App.checkSession());
 } else {
-  window.addEventListener('load', () => window.App.checkSession());
+  window.App.checkSession();
 }
