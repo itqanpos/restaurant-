@@ -1,4 +1,7 @@
-// حالة الكاشير
+// =============================================
+// نظام المطاعم - كاشير كامل (pos.js)
+// =============================================
+
 let currentOrderType = 'dine_in';
 let selectedTable = null;
 let selectedCustomer = { name: '', phone: '', address: '', notes: '' };
@@ -27,10 +30,10 @@ async function initPOS() {
   // تقسيم الفاتورة
   document.getElementById('splitBillBtn').addEventListener('click', openSplitBillModal);
 
-  // تطبيق الخصم
+  // الخصم
   document.getElementById('applyDiscountBtn').addEventListener('click', applyDiscount);
 
-  // عرض التصنيفات والمنتجات
+  // عرض المنتجات
   renderCategories();
   renderProducts('all');
   updateCartDisplay();
@@ -103,12 +106,12 @@ function openCustomerModal(orderType) {
   modal.innerHTML = `
     <div class="modal-content">
       <h3 class="font-bold mb-4">${orderType === 'delivery' ? 'بيانات التوصيل' : 'معلومات العميل'}</h3>
-      <input type="text" id="custName" placeholder="اسم العميل" class="form-input mb-2">
+      <input type="text" id="custName" placeholder="اسم العميل" class="w-full border rounded-lg p-2 mb-2">
       ${orderType === 'delivery' ? `
-        <input type="text" id="custPhone" placeholder="رقم الهاتف" class="form-input mb-2">
-        <input type="text" id="custAddress" placeholder="العنوان" class="form-input mb-2">
+        <input type="text" id="custPhone" placeholder="رقم الهاتف" class="w-full border rounded-lg p-2 mb-2">
+        <input type="text" id="custAddress" placeholder="العنوان" class="w-full border rounded-lg p-2 mb-2">
       ` : ''}
-      <textarea id="custNotes" placeholder="ملاحظات" class="form-input mb-2"></textarea>
+      <textarea id="custNotes" placeholder="ملاحظات" class="w-full border rounded-lg p-2 mb-2"></textarea>
       <div class="flex justify-end gap-2">
         <button class="bg-gray-200 px-4 py-2 rounded" onclick="this.closest('.modal').remove()">إلغاء</button>
         <button id="confirmCustBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">تأكيد</button>
@@ -129,10 +132,10 @@ function openCustomerModal(orderType) {
 
 // ======== تصنيفات المنتجات ========
 function renderCategories() {
-  const categories = [...new Set(App.products.map(p => p.category_id))];
+  const cats = [...new Set(App.products.map(p => p.category_id))];
   const container = document.getElementById('categoryFilters');
   container.innerHTML = `<button class="cat-btn bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm" data-cat="all">الكل</button>` +
-    categories.map(cat => {
+    cats.map(cat => {
       const name = App.products.find(p => p.category_id === cat)?.categories?.name || cat;
       return `<button class="cat-btn bg-gray-100 px-3 py-1 rounded-full text-sm" data-cat="${cat}">${name}</button>`;
     }).join('');
@@ -151,18 +154,45 @@ function renderProducts(category = 'all') {
   const grid = document.getElementById('productGrid');
   grid.innerHTML = filtered.map(p => `
     <div class="bg-white rounded-xl shadow-sm p-3 text-center cursor-pointer hover:shadow-md hover:border-indigo-300 border-2 border-transparent transition"
-         onclick="addToCart('${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.price})">
+         onclick="openAddonModal('${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.price}, '${p.image_url || ''}')">
+      ${p.image_url ? `<img src="${p.image_url}" class="w-full h-24 object-cover rounded-lg mb-2">` : ''}
       <div class="font-bold text-sm">${p.name}</div>
       <div class="text-green-600 font-bold mt-1">${App.formatCurrency(p.price)}</div>
     </div>
   `).join('');
 }
 
-// ======== السلة ========
-function addToCart(id, name, price, addons = [], notes = '') {
-  App.addToCart(id, name, price, addons, notes);
+// ★★★ موديل الإضافات ★★★
+function openAddonModal(productId, productName, productPrice, imageUrl) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="font-bold mb-4">${productName}</h3>
+      ${imageUrl ? `<img src="${imageUrl}" class="w-full h-32 object-cover rounded-lg mb-3">` : ''}
+      <div class="space-y-2 mb-3">
+        <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="صوص"> إضافة صوص</label>
+        <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="جبنة"> إضافة جبنة</label>
+        <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="بدون جبنة"> بدون جبنة</label>
+      </div>
+      <textarea id="itemNotes" class="w-full border rounded-lg p-2 text-sm" placeholder="ملاحظات إضافية..."></textarea>
+      <div class="flex justify-end gap-2 mt-4">
+        <button class="bg-gray-200 px-4 py-2 rounded" onclick="this.closest('.modal').remove()">إلغاء</button>
+        <button id="confirmAddonBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">إضافة للسلة</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('posModalsContainer').appendChild(modal);
+
+  document.getElementById('confirmAddonBtn').addEventListener('click', () => {
+    const selectedAddons = Array.from(modal.querySelectorAll('.addon-item:checked')).map(inp => inp.value);
+    const notes = document.getElementById('itemNotes').value;
+    App.addToCart(productId, productName, productPrice, selectedAddons, notes);
+    modal.remove();
+  });
 }
 
+// ======== السلة ========
 window.updateCartDisplay = function() {
   const container = document.getElementById('cartItems');
   if (!container) return;
@@ -193,8 +223,7 @@ window.updateCartDisplay = function() {
 };
 
 function updateTotals() {
-  const { subtotal, discount, total } = App.getCartTotals ? App.getCartTotals() : 
-    { subtotal: App.cart.reduce((s,i) => s + i.price * i.qty, 0), discount: 0, total: App.cart.reduce((s,i) => s + i.price * i.qty, 0) };
+  const { subtotal, discount, total } = App.getCartTotals();
   const tax = total * 0.14;
   document.getElementById('posSubtotal').textContent = App.formatCurrency(subtotal);
   document.getElementById('posTax').textContent = App.formatCurrency(tax);
@@ -210,10 +239,10 @@ async function applyDiscount() {
     if (discount) {
       App.appliedDiscount = discount;
       alert(`تم تطبيق الخصم: ${discount.value}${discount.type === 'percentage' ? '%' : ' ج.م'}`);
+      updateCartDisplay();
     } else {
       alert('كود الخصم غير صالح');
     }
-    updateCartDisplay();
   } catch (e) {
     alert('فشل تطبيق الخصم');
   }
