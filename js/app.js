@@ -1,8 +1,8 @@
 // =============================================
-// نظام المطاعم - Restaurant SaaS (إصدار آمن 100%)
+// نظام المطاعم - Restaurant SaaS (نهائي)
 // =============================================
 
-// ★ 1. تأسيس Supabase (لا حاجة لانتظار while)
+// ★ 1. تأسيس Supabase
 const SUPABASE_URL = 'https://xisosjmybqmuzveffhdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM';
 
@@ -11,7 +11,7 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 window.supabase = supabase;
 
-// ★ 2. طبقة Api (جاهزة فوراً)
+// ★ 2. طبقة Api
 window.Api = {
   products: {
     async getAll(restId) {
@@ -51,7 +51,7 @@ window.Api = {
   }
 };
 
-// ★ 3. كائن App (جاهز فوراً)
+// ★ 3. كائن App
 window.App = {
   user: null, session: null, currentPage: 'home',
   language: localStorage.getItem('preferredLanguage') || 'ar',
@@ -84,13 +84,22 @@ window.App = {
 
   canAccess() { return true; },
   goHome() { this.loadPage('home'); },
-  showUI() { document.getElementById('appHeader').style.display = 'flex'; },
-  hideUI() { document.getElementById('appHeader').style.display = 'none'; },
+
+  showUI() {
+    const header = document.getElementById('appHeader');
+    if (header) header.style.display = 'flex';
+  },
+  hideUI() {
+    const header = document.getElementById('appHeader');
+    if (header) header.style.display = 'none';
+  },
 
   async loadPage(page) {
-    document.getElementById('headerTitle').textContent = this.t(page);
+    const titleEl = document.getElementById('headerTitle');
+    if (titleEl) titleEl.textContent = this.t(page);
     this.currentPage = page;
     const container = document.getElementById('pageContainer');
+    if (!container) return;
     try {
       const resp = await fetch(`pages/${page}.html`);
       if (!resp.ok) throw new Error('ملف غير موجود');
@@ -158,7 +167,7 @@ window.App = {
     await this.loadPage('login');
   },
 
-  // ★ دوال السلة الكاملة
+  // دوال السلة
   addToCart(id, name, price, addons = [], notes = '') {
     const existing = this.cart.find(item =>
       item.id === id &&
@@ -235,5 +244,9 @@ window.App = {
   }
 };
 
-// بدء التطبيق
-window.App.checkSession();
+// ★ 4. بدء التطبيق بعد تحميل الصفحة
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  window.App.checkSession();
+} else {
+  window.addEventListener('load', () => window.App.checkSession());
+}
