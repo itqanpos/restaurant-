@@ -1,8 +1,7 @@
 // =============================================
-// نظام المطاعم - النواة الأساسية (لا تُعدّل)
+// نظام المطاعم - النواة الأساسية (ثابت + دوال السلة)
 // =============================================
 
-// 1. تأسيس Supabase مع ضمان جاهزيته
 function initSupabase() {
   return new Promise((resolve, reject) => {
     const url = 'https://xisosjmybqmuzveffhdb.supabase.co';
@@ -23,11 +22,10 @@ function initSupabase() {
   });
 }
 
-// 2. بدء التطبيق
 (async function() {
   const supabase = await initSupabase();
 
-  // 3. طبقة Api الأساسية (ثابتة)
+  // طبقة Api
   window.Api = {
     products: {
       async getAll(restId) {
@@ -61,12 +59,17 @@ function initSupabase() {
     }
   };
 
-  // 4. كائن App الأساسي (ثابت)
+  // كائن App (القلب + دوال السلة)
   window.App = {
     user: null, session: null, currentPage: 'home',
     language: localStorage.getItem('preferredLanguage') || 'ar',
     currency: 'EGP', taxRate: 14,
     cart: [], products: [], inventory: [], restaurant: null, branch: null,
+    // خصائص الكاشير المضافة
+    orderType: 'dine_in',
+    table: null,
+    customer: {},
+    appliedDiscount: null,
 
     formatCurrency(amount) { return Number(amount).toFixed(2) + ' ج.م'; },
 
@@ -162,6 +165,80 @@ function initSupabase() {
       this.user = null; this.cart = [];
       this.hideUI();
       await this.loadPage('login');
+    },
+
+    // ★ دوال السلة (مضمّنة لضمان الجاهزية) ★
+    addToCart(id, name, price, addons = [], notes = '') {
+      const existing = this.cart.find(item =>
+        item.id === id &&
+        JSON.stringify(item.addons || []) === JSON.stringify(addons) &&
+        (item.notes || '') === notes
+      );
+      if (existing) existing.qty++;
+      else this.cart.push({ id, name, price, qty: 1, addons, notes });
+      if (typeof updateCartDisplay === 'function') updateCartDisplay();
+    },
+
+    changeQty(id, delta) {
+      const item = this.cart.find(i => i.id === id);
+      if (!item) return;
+      item.qty += delta;
+      if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
+      if (typeof updateCartDisplay === 'function') updateCartDisplay();
+    },
+
+    clearCart() {
+      this.cart = [];
+      this.appliedDiscount = null;
+      if (typeof updateCartDisplay === 'function') updateCartDisplay();
+    },
+
+    getCartTotals() {
+      const subtotal = this.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+      let discount = 0;
+      if (this.appliedDiscount) {
+        discount = this.appliedDiscount.type === 'percentage'
+          ? subtotal * (this.appliedDiscount.value / 100)
+          : this.appliedDiscount.value;
+      }
+      const total = Math.max(0, subtotal - discount);
+      return { subtotal, discount, total };
+    },
+
+    async placeOrder(paymentMethod = 'cash') {
+      if (!this.cart.length) return;
+      const { subtotal, discount, total } = this.getCartTotals();
+      const tax = total * (this.taxRate / 100);
+      const order = {
+        restaurant_id: this.restaurant?.id,
+        branch_id: this.branch?.id,
+        type: this.orderType,
+        status: 'new',
+        table_number: this.table,
+        customer_name: this.customer.name || null,
+        customer_phone: this.customer.phone || null,
+        delivery_address: this.customer.address || null,
+        notes: this.customer.notes || null,
+        subtotal,
+        discount_amount: discount,
+        tax_amount: tax,
+        total: total + tax,
+        source: 'pos',
+        created_by: this.user?.id
+      };
+      try {
+        const newOrder = await window.Api.orders.create(order, this.cart.map(i => ({
+          product_id: i.id,
+          name: i.name,
+          price: i.price,
+          quantity: i.qty,
+          notes: [i.addons?.join(', '), i.notes].filter(Boolean).join(' | ')
+        })));
+        alert(`✅ تم الطلب #${newOrder.order_number} - الدفع ${paymentMethod}`);
+        this.clearCart();
+      } catch (e) {
+        alert('فشل الطلب: ' + e.message);
+      }
     }
   };
 
