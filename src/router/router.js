@@ -28,10 +28,11 @@ class Router {
         module.init();
       }
     } catch (err) {
+      console.error('فشل تحميل الصفحة:', err);
       container.innerHTML = `<h2 class="text-2xl font-bold p-6">404 - الصفحة غير موجودة</h2>`;
     }
 
-    // تحديث عنوان الهيدر (يمكن تحسينه لاحقاً)
+    // تحديث عنوان الهيدر
     const titles = { home: 'الرئيسية', pos: 'الكاشير', kitchen: 'المطبخ', dashboard: 'الرئيسية', login: 'تسجيل الدخول' };
     document.getElementById('headerTitle').textContent = titles[page] || page;
   }
