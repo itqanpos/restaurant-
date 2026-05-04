@@ -1,0 +1,6 @@
+body { font-family: 'Tajawal', sans-serif; height: 100vh; overflow: hidden; }
+.product-card:active { transform: scale(0.96); background: #eef2ff; }
+.qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d1d5db; background: white; cursor: pointer; }
+.qty-btn:active { background: #6366f1; color: white; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal-content { background: white; border-radius: 20px; padding: 24px; width: 90%; max-width: 500px; }
