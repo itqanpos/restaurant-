@@ -1,194 +1,291 @@
 // =============================================
-// نظام المطاعم - النواة الأساسية (ثابت وآمن)
+// كاشير كامل مع الإصلاحات (pos.js)
 // =============================================
+let currentOrderType = 'dine_in';
+let selectedTable = null;
+let selectedCustomer = { name: '', phone: '', address: '', notes: '' };
+let heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
 
-// تأسيس Supabase مع التحقق من جاهزية المكتبة
-function initSupabase() {
-  return new Promise((resolve, reject) => {
-    if (window.supabase) {
-      const supabase = window.supabase.createClient(
-        'https://xisosjmybqmuzveffhdb.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM',
-        { auth: { persistSession: true, autoRefreshToken: true } }
-      );
-      window.supabase = supabase;
-      resolve(supabase);
-    } else {
-      // إعادة المحاولة كل 100ms حتى 20 مرة
-      let tries = 0;
-      const interval = setInterval(() => {
-        tries++;
-        if (window.supabase) {
-          clearInterval(interval);
-          const supabase = window.supabase.createClient(
-            'https://xisosjmybqmuzveffhdb.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc29zam15YnFtdXp2ZWZmaGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzg2OTgsImV4cCI6MjA4MzYxNDY5OH0.w6ozzvUv0VG7PVizc0TFpwfYq8x50AqqOkwrlQ1eSLM',
-            { auth: { persistSession: true, autoRefreshToken: true } }
-          );
-          window.supabase = supabase;
-          resolve(supabase);
-        } else if (tries >= 20) {
-          clearInterval(interval);
-          reject(new Error('Supabase لم يتم تحميله'));
-        }
-      }, 100);
-    }
-  });
-}
+// تعريف دالة تحديث السلة
+window.updateCartDisplay = function() {
+  const container = document.getElementById('cartItems');
+  if (!container) return;
 
-// بدء التشغيل
-(async function() {
-  let supabase;
-  try {
-    supabase = await initSupabase();
-  } catch (e) {
-    console.error(e);
-    document.getElementById('pageContainer').innerHTML = '<p class="p-6 text-red-500">تعذر الاتصال بقاعدة البيانات. تأكد من الاتصال بالإنترنت.</p>';
+  if (!App.cart.length) {
+    container.innerHTML = '<p class="text-gray-400 text-center mt-8">السلة فارغة</p>';
+    updateTotals();
     return;
   }
 
-  // طبقة Api (ثابتة)
-  window.Api = {
-    products: {
-      async getAll(restId) {
-        const { data } = await supabase.from('products').select('*, categories(name)').eq('restaurant_id', restId).eq('is_available', true).order('name');
-        return data || [];
-      }
-    },
-    inventory: {
-      async getAll(restId) {
-        const { data } = await supabase.from('inventory_items').select('*').eq('restaurant_id', restId).order('name');
-        return data || [];
-      }
-    },
-    orders: {
-      async create(orderData, items) {
-        const { data: order } = await supabase.from('orders').insert(orderData).select().single();
-        if (order && items.length) await supabase.from('order_items').insert(items.map(i => ({ ...i, order_id: order.id })));
-        return order;
-      }
-    },
-    discounts: {
-      async validate(code, restId) {
-        const { data } = await supabase.from('discounts').select('*').eq('code', code).eq('restaurant_id', restId).eq('is_active', true).single();
-        if (!data) return null;
-        const now = new Date();
-        if (data.valid_from && new Date(data.valid_from) > now) return null;
-        if (data.valid_until && new Date(data.valid_until) < now) return null;
-        if (data.max_uses > 0 && data.current_uses >= data.max_uses) return null;
-        return data;
-      }
+  container.innerHTML = App.cart.map(item => `
+    <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+      <div class="flex-1">
+        <span class="font-medium">${item.name}</span>
+        ${item.addons?.length ? `<p class="text-xs text-indigo-600">+ ${item.addons.join(', ')}</p>` : ''}
+        ${item.notes ? `<p class="text-xs text-gray-400">${item.notes}</p>` : ''}
+        <div class="text-sm text-gray-500">${App.formatCurrency(item.price)} × ${item.qty}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="qty-btn" onclick="App.changeQty('${item.id}', -1)">-</button>
+        <span class="font-bold">${item.qty}</span>
+        <button class="qty-btn" onclick="App.changeQty('${item.id}', 1)">+</button>
+      </div>
+    </div>
+  `).join('');
+
+  updateTotals();
+};
+
+function updateTotals() {
+  if (typeof App.getCartTotals !== 'function') return;
+  const { subtotal, discount, total } = App.getCartTotals();
+  const tax = total * 0.14;
+  document.getElementById('posSubtotal').textContent = App.formatCurrency(subtotal);
+  document.getElementById('posTax').textContent = App.formatCurrency(tax);
+  document.getElementById('posTotal').textContent = App.formatCurrency(total + tax);
+}
+
+async function initPOS() {
+  // ★ ربط الأزرار أولاً (لا يعتمد على بيانات) ★
+  document.getElementById('btnDineIn').addEventListener('click', () => setOrderType('dine_in'));
+  document.getElementById('btnTakeaway').addEventListener('click', () => setOrderType('takeaway'));
+  document.getElementById('btnDelivery').addEventListener('click', () => setOrderType('delivery'));
+
+  document.getElementById('payCashBtn').addEventListener('click', () => placeOrder('cash'));
+  document.getElementById('payVisaBtn').addEventListener('click', () => placeOrder('visa'));
+  document.getElementById('payWalletBtn').addEventListener('click', () => placeOrder('wallet'));
+
+  document.getElementById('holdOrderBtn').addEventListener('click', holdOrder);
+  document.getElementById('recallOrderBtn').addEventListener('click', recallOrder);
+  document.getElementById('splitBillBtn').addEventListener('click', openSplitBillModal);
+  document.getElementById('applyDiscountBtn').addEventListener('click', applyDiscount);
+
+  // اختصارات لوحة المفاتيح
+  document.addEventListener('keydown', (e) => {
+    if (App.currentPage !== 'pos') return;
+    if (e.key === 'F1') { e.preventDefault(); placeOrder('cash'); }
+    else if (e.key === 'F2') { e.preventDefault(); placeOrder('visa'); }
+    else if (e.key === 'F3') { e.preventDefault(); placeOrder('wallet'); }
+  });
+
+  // ★ تحميل المنتجات بشكل آمن (لن يمنع الأزرار من العمل) ★
+  try {
+    if (!App.products.length && App.restaurant?.id) {
+      App.products = await window.Api.products.getAll(App.restaurant.id);
     }
-  };
-
-  // كائن App الأساسي (ثابت)
-  window.App = {
-    user: null, session: null, currentPage: 'home',
-    language: localStorage.getItem('preferredLanguage') || 'ar',
-    currency: 'EGP', taxRate: 14,
-    cart: [], products: [], inventory: [], restaurant: null, branch: null,
-
-    formatCurrency(amount) { return Number(amount).toFixed(2) + ' ج.م'; },
-
-    t(key) {
-      const dict = {
-        ar: { dashboard:'الرئيسية', pos:'الكاشير', kitchen:'المطبخ', inventory:'المخزون', reports:'التقارير', discounts:'الخصومات', users:'المستخدمين', settings:'الإعدادات', qrmenu:'قائمة QR', login:'تسجيل الدخول', home:'الرئيسية' },
-        en: { dashboard:'Dashboard', pos:'POS', kitchen:'Kitchen', inventory:'Inventory', reports:'Reports', discounts:'Discounts', users:'Users', settings:'Settings', qrmenu:'QR Menu', login:'Login', home:'Home' }
-      };
-      return (dict[this.language] && dict[this.language][key]) || key;
-    },
-
-    toggleLanguage() {
-      this.language = this.language === 'ar' ? 'en' : 'ar';
-      localStorage.setItem('preferredLanguage', this.language);
-      document.documentElement.lang = this.language;
-      document.documentElement.dir = this.language === 'ar' ? 'rtl' : 'ltr';
-      const langLabel = document.getElementById('langLabel');
-      if (langLabel) langLabel.textContent = this.language === 'ar' ? 'English' : 'العربية';
-      this.loadPage(this.currentPage);
-    },
-
-    canAccess() { return true; },
-    goHome() { this.loadPage('home'); },
-
-    showUI() { const h = document.getElementById('appHeader'); if (h) h.style.display = 'flex'; },
-    hideUI() { const h = document.getElementById('appHeader'); if (h) h.style.display = 'none'; },
-
-    async loadPage(page) {
-      const title = document.getElementById('headerTitle'); if (title) title.textContent = this.t(page);
-      this.currentPage = page;
-      const container = document.getElementById('pageContainer');
-      if (!container) return;
-      try {
-        const resp = await fetch(`pages/${page}.html`);
-        if (!resp.ok) throw new Error('ملف غير موجود');
-        const html = await resp.text();
-        container.innerHTML = html;
-        const initFn = 'init' + page[0].toUpperCase() + page.slice(1);
-        if (typeof window[initFn] === 'function') {
-          try { await window[initFn](); } catch(e) { console.error(e); }
-        }
-      } catch (err) {
-        container.innerHTML = `<h2 class="text-2xl font-bold p-6">${this.t(page)}</h2><p class="px-6 text-gray-500">محتوى مؤقت...</p>`;
-      }
-    },
-
-    async checkSession() {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          this.user = data.session.user; this.session = data.session;
-          await this.loadTenantData();
-          this.showUI();
-          await this.loadPage('home');
-        } else {
-          this.hideUI();
-          await this.loadPage('login');
-        }
-      } catch (e) {
-        this.hideUI();
-        await this.loadPage('login');
-      }
-    },
-
-    async finishLogin(user, session) {
-      this.user = user; this.session = session;
-      try { await this.loadTenantData(); } catch(e) {}
-      this.showUI();
-      await this.loadPage('home');
-    },
-
-    async loadTenantData() {
-      if (!this.user) return;
-      try {
-        const { data } = await supabase.from('user_restaurant_roles')
-          .select('restaurant_id, restaurants(*), branches(*), roles(name)')
-          .eq('user_id', this.user.id).limit(1).single();
-        if (data) {
-          this.restaurant = data.restaurants; this.branch = data.branches;
-          this.user.role = data.roles?.name || 'admin';
-          this.products = await window.Api.products.getAll(data.restaurant_id);
-          this.inventory = await window.Api.inventory.getAll(data.restaurant_id);
-        } else {
-          this.user.role = 'admin'; this.products = []; this.inventory = [];
-        }
-      } catch (e) {
-        this.user.role = 'admin'; this.products = []; this.inventory = [];
-      }
-    },
-
-    async logout() {
-      await supabase.auth.signOut();
-      this.user = null; this.cart = [];
-      this.hideUI();
-      await this.loadPage('login');
-    }
-  };
-
-  // بدء التطبيق بعد أن يصبح جاهزاً
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    window.App.checkSession();
-  } else {
-    document.addEventListener('DOMContentLoaded', () => window.App.checkSession());
+  } catch (e) {
+    console.warn('تعذر تحميل المنتجات:', e);
   }
-})();
+
+  // عرض الواجهة
+  renderCategories();
+  renderProducts('all');
+  updateCartDisplay();
+}
+
+// -- نوع الطلب --
+function setOrderType(type) {
+  currentOrderType = type;
+  document.querySelectorAll('.order-type-btn').forEach(b => {
+    b.classList.remove('bg-indigo-600', 'text-white');
+    b.classList.add('bg-white', 'border');
+  });
+  const activeBtn = document.getElementById('btn' + type.charAt(0).toUpperCase() + type.slice(1).replace('_', ''));
+  activeBtn.classList.add('bg-indigo-600', 'text-white');
+  if (type === 'dine_in') openTableModal();
+  else if (type === 'takeaway') openCustomerModal('takeaway');
+  else if (type === 'delivery') openCustomerModal('delivery');
+}
+
+function openTableModal() {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="font-bold mb-4">اختر الطاولة</h3>
+      <div class="grid grid-cols-5 gap-2">
+        ${Array.from({length: 20}, (_,i) => i+1).map(n => `<div class="table-cell bg-gray-100 p-2 rounded text-center cursor-pointer hover:bg-indigo-100" data-table="${n}">T${n}</div>`).join('')}
+      </div>
+      <div class="flex justify-end mt-4 gap-2">
+        <button class="bg-gray-200 px-4 py-2 rounded" onclick="this.closest('.modal').remove()">إلغاء</button>
+        <button id="confirmTableBtn" class="bg-indigo-600 text-white px-4 py-2 rounded" disabled>تأكيد</button>
+      </div>
+    </div>`;
+  document.getElementById('posModalsContainer').appendChild(modal);
+  modal.querySelectorAll('.table-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      modal.querySelectorAll('.table-cell').forEach(c => c.classList.remove('bg-indigo-600','text-white'));
+      cell.classList.add('bg-indigo-600','text-white');
+      selectedTable = cell.dataset.table;
+      document.getElementById('confirmTableBtn').disabled = false;
+    });
+  });
+  document.getElementById('confirmTableBtn').addEventListener('click', () => {
+    document.getElementById('orderInfoBar').innerText = `طاولة: ${selectedTable}`;
+    modal.remove();
+  });
+}
+
+function openCustomerModal(orderType) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="font-bold mb-4">${orderType === 'delivery' ? 'بيانات التوصيل' : 'معلومات العميل'}</h3>
+      <input type="text" id="custName" placeholder="اسم العميل" class="w-full border rounded-lg p-2 mb-2">
+      ${orderType === 'delivery' ? `<input type="text" id="custPhone" placeholder="رقم الهاتف" class="w-full border rounded-lg p-2 mb-2"><input type="text" id="custAddress" placeholder="العنوان" class="w-full border rounded-lg p-2 mb-2">` : ''}
+      <textarea id="custNotes" placeholder="ملاحظات" class="w-full border rounded-lg p-2 mb-2"></textarea>
+      <div class="flex justify-end gap-2"><button class="bg-gray-200 px-4 py-2 rounded" onclick="this.closest('.modal').remove()">إلغاء</button><button id="confirmCustBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">تأكيد</button></div>
+    </div>`;
+  document.getElementById('posModalsContainer').appendChild(modal);
+  document.getElementById('confirmCustBtn').addEventListener('click', () => {
+    selectedCustomer.name = document.getElementById('custName').value;
+    selectedCustomer.phone = document.getElementById('custPhone')?.value || '';
+    selectedCustomer.address = document.getElementById('custAddress')?.value || '';
+    selectedCustomer.notes = document.getElementById('custNotes').value;
+    document.getElementById('orderInfoBar').innerText = `العميل: ${selectedCustomer.name || 'غير محدد'}`;
+    modal.remove();
+  });
+}
+
+function renderCategories() {
+  const cats = [...new Set(App.products.map(p => p.category_id))];
+  const container = document.getElementById('categoryFilters');
+  container.innerHTML = `<button class="cat-btn bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm" data-cat="all">الكل</button>` +
+    cats.map(cat => {
+      const name = App.products.find(p => p.category_id === cat)?.categories?.name || cat;
+      return `<button class="cat-btn bg-gray-100 px-3 py-1 rounded-full text-sm" data-cat="${cat}">${name}</button>`;
+    }).join('');
+  container.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('bg-indigo-100','text-indigo-700'));
+      btn.classList.add('bg-indigo-100','text-indigo-700');
+      renderProducts(btn.dataset.cat);
+    });
+  });
+}
+
+function renderProducts(category = 'all') {
+  let filtered = App.products;
+  if (category !== 'all') filtered = filtered.filter(p => p.category_id == category);
+  const grid = document.getElementById('productGrid');
+  grid.innerHTML = filtered.map(p => `
+    <div class="bg-white rounded-xl shadow-sm p-3 text-center cursor-pointer hover:shadow-md hover:border-indigo-300 border-2 border-transparent transition"
+         onclick="openAddonModal('${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.price}, '${p.image_url || ''}')">
+      <div class="font-bold text-sm">${p.name}</div>
+      <div class="text-green-600 font-bold mt-1">${App.formatCurrency(p.price)}</div>
+    </div>
+  `).join('');
+}
+
+function openAddonModal(productId, productName, productPrice, imageUrl) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="font-bold mb-4">${productName}</h3>
+      <div class="space-y-2 mb-3">
+        <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="صوص"> إضافة صوص</label>
+        <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="جبنة"> إضافة جبنة</label>
+        <label class="flex items-center gap-2"><input type="checkbox" class="addon-item" value="بدون جبنة"> بدون جبنة</label>
+      </div>
+      <textarea id="itemNotes" class="w-full border rounded-lg p-2 text-sm" placeholder="ملاحظات إضافية..."></textarea>
+      <div class="flex justify-end gap-2 mt-4">
+        <button class="bg-gray-200 px-4 py-2 rounded" onclick="this.closest('.modal').remove()">إلغاء</button>
+        <button id="confirmAddonBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">إضافة للسلة</button>
+      </div>
+    </div>`;
+  document.getElementById('posModalsContainer').appendChild(modal);
+  document.getElementById('confirmAddonBtn').addEventListener('click', () => {
+    const selectedAddons = Array.from(modal.querySelectorAll('.addon-item:checked')).map(i => i.value);
+    const notes = document.getElementById('itemNotes').value;
+    App.addToCart(productId, productName, productPrice, selectedAddons, notes);
+    modal.remove();
+  });
+}
+
+async function applyDiscount() {
+  const code = document.getElementById('discountCode').value.trim();
+  if (!code) return;
+  try {
+    const discount = await window.Api.discounts.validate(code, App.restaurant?.id);
+    if (discount) {
+      App.appliedDiscount = discount;
+      alert(`تم تطبيق الخصم: ${discount.value}${discount.type === 'percentage' ? '%' : ' ج.م'}`);
+      updateCartDisplay();
+    } else alert('كود الخصم غير صالح');
+  } catch (e) { alert('فشل تطبيق الخصم'); }
+}
+
+async function placeOrder(method = 'cash') {
+  if (!App.cart.length) return;
+  App.orderType = currentOrderType;
+  App.table = selectedTable;
+  App.customer = selectedCustomer;
+  await App.placeOrder(method);
+  selectedTable = null;
+  selectedCustomer = { name: '', phone: '', address: '', notes: '' };
+  document.getElementById('orderInfoBar').innerText = '';
+}
+
+function holdOrder() {
+  if (!App.cart.length) return alert('السلة فارغة');
+  heldOrders.push({
+    id: Date.now(), type: currentOrderType, table: selectedTable,
+    customer: {...selectedCustomer}, cart: JSON.parse(JSON.stringify(App.cart)),
+    appliedDiscount: App.appliedDiscount, time: new Date().toLocaleString('ar-EG')
+  });
+  localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
+  App.clearCart();
+  document.getElementById('orderInfoBar').innerText = '';
+  selectedTable = null; selectedCustomer = {};
+  alert('تم تعليق الفاتورة');
+}
+
+function recallOrder() {
+  if (!heldOrders.length) return alert('لا توجد فواتير معلقة');
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="font-bold mb-4">استرجاع فاتورة</h3>
+      <div class="space-y-2 max-h-60 overflow-y-auto">
+        ${heldOrders.map((o, i) => `<div class="p-2 bg-gray-50 rounded cursor-pointer hover:bg-indigo-50" data-idx="${i}"><strong>فاتورة #${o.id}</strong><p class="text-sm">${o.type} - ${o.cart.length} عناصر</p><p class="text-xs">${o.time}</p></div>`).join('')}
+      </div>
+      <button class="mt-4 bg-gray-200 px-4 py-2 rounded" onclick="this.closest('.modal').remove()">إغلاق</button>
+    </div>`;
+  document.getElementById('posModalsContainer').appendChild(modal);
+  modal.querySelectorAll('[data-idx]').forEach(div => {
+    div.addEventListener('click', () => {
+      const idx = parseInt(div.dataset.idx);
+      const restored = heldOrders[idx];
+      currentOrderType = restored.type; selectedTable = restored.table;
+      selectedCustomer = restored.customer; App.cart = restored.cart;
+      App.appliedDiscount = restored.appliedDiscount;
+      heldOrders.splice(idx, 1);
+      localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
+      updateCartDisplay();
+      document.getElementById('orderInfoBar').innerText = restored.type === 'dine_in' ? `طاولة: ${restored.table}` : `العميل: ${restored.customer?.name || ''}`;
+      modal.remove();
+    });
+  });
+}
+
+function openSplitBillModal() {
+  if (!App.cart.length) return;
+  const total = App.cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="font-bold mb-4">تقسيم الفاتورة</h3>
+      <p>الإجمالي: ${App.formatCurrency(total)}</p>
+      <input type="number" id="splitCount" value="2" min="2" class="border p-2 rounded w-full mt-2">
+      <p class="mt-2 text-green-600 font-bold">كل شخص: <span id="perPerson">${App.formatCurrency(total/2)}</span></p>
+      <div class="flex gap-2 mt-4"><button class="flex-1 bg-gray-200 py-2 rounded" onclick="this.closest('.modal').remove()">إلغاء</button></div>
+    </div>`;
+  document.getElementById('posModalsContainer').appendChild(modal);
+  modal.querySelector('#splitCount').addEventListener('input', e => {
+    document.getElementById('perPerson').textContent = App.formatCurrency(total / (parseInt(e.target.value) || 1));
+  });
+}
