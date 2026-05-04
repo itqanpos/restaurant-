@@ -8,21 +8,24 @@ initApi(supabase);
 
 // تحميل أولي
 async function bootstrap() {
-  // استعادة الجلسة
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    AppState.user = session.user;
-    AppState.session = session;
-    await loadTenantData();
-    showUI();
-    router.navigate('home');
-  } else {
-    hideUI();
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      AppState.user = session.user;
+      AppState.session = session;
+      await loadTenantData();
+      showUI();
+      router.navigate('home');
+    } else {
+      hideUI();
+      router.navigate('login');
+    }
+  } catch (e) {
+    console.error(e);
     router.navigate('login');
   }
 }
 
-// تحميل بيانات المستأجر
 async function loadTenantData() {
   const { data } = await supabase
     .from('user_restaurant_roles')
@@ -34,39 +37,32 @@ async function loadTenantData() {
     AppState.restaurant = data.restaurants;
     AppState.branch = data.branches;
     AppState.user.role = data.roles?.name || 'admin';
-    // تحميل المنتجات والمخزون
-    const { products, inventory } = await import('./shared/services/api.js');
+    const { products } = await import('./shared/services/api.js');
     AppState.products = await products.getAll(AppState.restaurant.id);
+    const { inventory } = await import('./shared/services/api.js');
     AppState.inventory = await inventory.getAll(AppState.restaurant.id);
   }
 }
 
-// عرض/إخفاء الهيدر
-function showUI() {
-  document.getElementById('appHeader').style.display = 'flex';
-}
-function hideUI() {
-  document.getElementById('appHeader').style.display = 'none';
-}
+function showUI() { document.getElementById('appHeader').style.display = 'flex'; }
+function hideUI() { document.getElementById('appHeader').style.display = 'none'; }
 
-// أحداث الأزرار العامة
-document.getElementById('langToggleBtn').addEventListener('click', () => {
-  AppState.language = AppState.language === 'ar' ? 'en' : 'ar';
-  document.documentElement.lang = AppState.language;
-  document.documentElement.dir = AppState.language === 'ar' ? 'rtl' : 'ltr';
-  document.getElementById('langLabel').textContent = AppState.language === 'ar' ? 'English' : 'العربية';
-  router.reload();
+// أزرار عامة
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('langToggleBtn')?.addEventListener('click', () => {
+    AppState.language = AppState.language === 'ar' ? 'en' : 'ar';
+    document.documentElement.lang = AppState.language;
+    document.documentElement.dir = AppState.language === 'ar' ? 'rtl' : 'ltr';
+    document.getElementById('langLabel').textContent = AppState.language === 'ar' ? 'English' : 'العربية';
+    router.reload();
+  });
+
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    AppState.user = null;
+    hideUI();
+    router.navigate('login');
+  });
+
+  bootstrap();
 });
-
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  AppState.user = null;
-  hideUI();
-  router.navigate('login');
-});
-
-// بدء التشغيل
-bootstrap();
-
-// تصدير AppState لاستخدامه في باقي الوحدات
-export { AppState, supabase };
