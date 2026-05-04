@@ -43,7 +43,21 @@ function updateTotals() {
   document.getElementById('posTax').textContent = App.formatCurrency(tax);
   document.getElementById('posTotal').textContent = App.formatCurrency(total + tax);
 }
+async function initPOS() {
+  // انتظر حتى تصبح دوال السلة جاهزة (أو ضع مهلة قصوى)
+  let attempts = 0;
+  while (typeof App.addToCart !== 'function' && attempts < 50) {
+    await new Promise(r => setTimeout(r, 50));
+    attempts++;
+  }
 
+  if (typeof App.addToCart !== 'function') {
+    console.error('دوال الكاشير غير متوفرة');
+    return;
+  }
+
+  // ... باقي كود initPOS (ربط الأزرار، تحميل المنتجات)
+}
 async function initPOS() {
   if (!App.products.length && App.restaurant && App.restaurant.id) {
     App.products = await window.Api.products.getAll(App.restaurant.id);
