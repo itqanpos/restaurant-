@@ -1,21 +1,15 @@
 // =============================================
-// نظام المطاعم - الإضافات (دوال السلة والطلب)
+// نظام المطاعم - الإضافات (مزامنة مباشرة)
 // =============================================
 (function() {
-  const waitForApp = () => {
-    if (!window.App) {
-      setTimeout(waitForApp, 50);
-      return;
-    }
+  // دوال السلة التي ستضاف إلى App حالما يصبح موجوداً
+  const extensions = {
+    orderType: 'dine_in',
+    table: null,
+    customer: {},
+    appliedDiscount: null,
 
-    // خصائص جديدة
-    App.orderType = 'dine_in';
-    App.table = null;
-    App.customer = {};
-    App.appliedDiscount = null;
-
-    // دوال السلة
-    App.addToCart = function(id, name, price, addons = [], notes = '') {
+    addToCart(id, name, price, addons = [], notes = '') {
       const existing = this.cart.find(item =>
         item.id === id &&
         JSON.stringify(item.addons || []) === JSON.stringify(addons) &&
@@ -23,26 +17,24 @@
       );
       if (existing) existing.qty++;
       else this.cart.push({ id, name, price, qty: 1, addons, notes });
-
-      // استدعاء تحديث واجهة السلة (ستُعرِّفها pos.js)
       if (typeof updateCartDisplay === 'function') updateCartDisplay();
-    };
+    },
 
-    App.changeQty = function(id, delta) {
+    changeQty(id, delta) {
       const item = this.cart.find(i => i.id === id);
       if (!item) return;
       item.qty += delta;
       if (item.qty <= 0) this.cart = this.cart.filter(i => i.id !== id);
       if (typeof updateCartDisplay === 'function') updateCartDisplay();
-    };
+    },
 
-    App.clearCart = function() {
+    clearCart() {
       this.cart = [];
       this.appliedDiscount = null;
       if (typeof updateCartDisplay === 'function') updateCartDisplay();
-    };
+    },
 
-    App.getCartTotals = function() {
+    getCartTotals() {
       const subtotal = this.cart.reduce((sum, i) => sum + i.price * i.qty, 0);
       let discount = 0;
       if (this.appliedDiscount) {
@@ -52,14 +44,12 @@
       }
       const total = Math.max(0, subtotal - discount);
       return { subtotal, discount, total };
-    };
+    },
 
-    // دالة الطلب
-    App.placeOrder = async function(paymentMethod = 'cash') {
+    async placeOrder(paymentMethod = 'cash') {
       if (!this.cart.length) return;
       const { subtotal, discount, total } = this.getCartTotals();
       const tax = total * (this.taxRate / 100);
-
       const order = {
         restaurant_id: this.restaurant?.id,
         branch_id: this.branch?.id,
@@ -77,7 +67,6 @@
         source: 'pos',
         created_by: this.user?.id
       };
-
       try {
         const newOrder = await window.Api.orders.create(order, this.cart.map(i => ({
           product_id: i.id,
@@ -91,9 +80,19 @@
       } catch (e) {
         alert('فشل الطلب: ' + e.message);
       }
-    };
-
-    console.log('✅ الإضافات جاهزة');
+    }
   };
-  waitForApp();
+
+  // دالة تطبيق الإضافات (تُستدعى مرة واحدة)
+  function applyExtensions() {
+    if (window.App) {
+      Object.assign(window.App, extensions);
+      console.log('✅ دوال الكاشير جاهزة');
+    } else {
+      // App غير موجود بعد، حاول بعد 20ms
+      setTimeout(applyExtensions, 20);
+    }
+  }
+
+  applyExtensions();
 })();
