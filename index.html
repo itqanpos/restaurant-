@@ -3,54 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>نظام المطاعم - Restaurant SaaS</title>
+  <title>R-SaaS</title>
+  <!-- Tailwind + Font Awesome -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Tajawal', sans-serif; height: 100vh; overflow: hidden; }
-    .product-card:active { transform: scale(0.96); background: #eef2ff; }
-    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d1d5db; background: white; cursor: pointer; }
-    .qty-btn:active { background: #6366f1; color: white; }
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
-    .modal-content { background: white; border-radius: 20px; padding: 24px; width: 90%; max-width: 500px; }
-  </style>
+  <link rel="stylesheet" href="assets/css/main.css">
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
-  <header id="appHeader" class="bg-white shadow-sm px-6 py-4 flex items-center justify-between hidden">
+  <!-- شريط العنوان -->
+  <header id="appHeader" class="bg-white shadow-sm px-4 py-3 flex items-center justify-between hidden">
     <h1 class="text-xl font-bold" id="headerTitle">الرئيسية</h1>
     <div class="flex items-center gap-3">
-      <button onclick="App.toggleLanguage()" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">
+      <button id="langToggleBtn" class="bg-gray-200 px-3 py-2 rounded-lg text-sm">
         <i class="fas fa-globe"></i> <span id="langLabel">English</span>
       </button>
-      <button onclick="App.logout()" class="text-red-500"><i class="fas fa-sign-out-alt"></i></button>
+      <button id="logoutBtn" class="text-red-500 p-2"><i class="fas fa-sign-out-alt text-xl"></i></button>
     </div>
   </header>
 
-  <main id="pageContainer" class="flex-1 overflow-y-auto" style="height: calc(100vh - 64px);"></main>
+  <!-- منطقة المحتوى الرئيسية -->
+  <main id="pageContainer" class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6"></main>
 
-  <!-- 1. المكتبات الأساسية -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-  <!-- 2. النواة الأساسية (ثابت، يحتوي على App و Api) -->
-  <script src="js/app-core.js"></script>
-
-  <!-- 3. الدوال العامة العالمية (يربط أزرار HTML بالدوال الحقيقية) -->
-  <script src="js/global.js"></script>
-
-  <!-- 4. ملفات الصفحات -->
-  <script src="js/pages/login.js"></script>
-  <script src="js/pages/home.js"></script>
-  <script src="js/pages/pos.js"></script>
-  <script src="js/pages/kitchen.js"></script>
-  <script src="js/pages/products.js"></script>
-  <script src="js/pages/inventory.js"></script>
-  <script src="js/pages/reports.js"></script>
-  <script src="js/pages/discounts.js"></script>
-  <script src="js/pages/users.js"></script>
-  <script src="js/pages/settings.js"></script>
-  <script src="js/pages/qrmenu.js"></script>
+  <!-- تحميل التطبيق كنمط Module -->
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>
