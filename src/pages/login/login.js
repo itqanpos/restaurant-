@@ -1,5 +1,10 @@
-function initLogin() {
-  App.hideUI();
+import { supabase } from '../../core/supabase/client.js';
+import { AppState } from '../../state/store.js';
+import { router } from '../../router/router.js';
+
+export function init() {
+  // إخفاء الهيدر
+  document.getElementById('appHeader').style.display = 'none';
 
   const tabLogin = document.getElementById('tabLogin');
   const tabSignup = document.getElementById('tabSignup');
@@ -10,6 +15,7 @@ function initLogin() {
 
   if (!tabLogin || !tabSignup || !loginForm || !signupForm) return;
 
+  // تبديل التبويبات
   tabLogin.addEventListener('click', () => {
     tabLogin.classList.add('bg-white', 'shadow');
     tabSignup.classList.remove('bg-white', 'shadow');
@@ -43,6 +49,16 @@ function initLogin() {
     icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
   });
 
+  // نسيت كلمة المرور
+  document.getElementById('forgotLink')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) return alert('أدخل بريدك الإلكتروني أولاً');
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) return alert(error.message);
+    alert('تم إرسال رابط الاستعادة إلى بريدك الإلكتروني');
+  });
+
   // تسجيل الدخول
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -51,7 +67,7 @@ function initLogin() {
 
     loginError.classList.add('hidden');
 
-    const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       loginError.textContent = error.message.includes('Invalid login')
         ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
@@ -60,7 +76,28 @@ function initLogin() {
       return;
     }
 
-    await App.finishLogin(data.user, data.session);
+    // تحديث الحالة
+    AppState.user = data.user;
+    AppState.session = data.session;
+
+    // تحميل بيانات المستأجر (اختياري، يمكن استدعاؤه من main)
+    try {
+      const { data: tenant } = await supabase
+        .from('user_restaurant_roles')
+        .select('restaurant_id, restaurants(*), branches(*), roles(name)')
+        .eq('user_id', data.user.id)
+        .limit(1)
+        .single();
+      if (tenant) {
+        AppState.restaurant = tenant.restaurants;
+        AppState.branch = tenant.branches;
+        AppState.user.role = tenant.roles?.name || 'admin';
+      }
+    } catch {}
+
+    // إظهار الهيدر والانتقال للرئيسية
+    document.getElementById('appHeader').style.display = 'flex';
+    router.navigate('home');
   });
 
   // إنشاء حساب
@@ -78,7 +115,7 @@ function initLogin() {
       return;
     }
 
-    const { data, error } = await window.supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } }
@@ -92,15 +129,5 @@ function initLogin() {
 
     alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
     tabLogin.click();
-  });
-
-  // نسيت كلمة المرور
-  document.getElementById('forgotLink')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    if (!email) return alert('أدخل بريدك الإلكتروني أولاً');
-    const { error } = await window.supabase.auth.resetPasswordForEmail(email);
-    if (error) return alert(error.message);
-    alert('تم إرسال رابط الاستعادة إلى بريدك الإلكتروني');
   });
 }
