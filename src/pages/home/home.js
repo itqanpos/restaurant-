@@ -1,4 +1,5 @@
 import { AppState } from '../../state/store.js';
+import { router } from '../../router/router.js';
 
 export function init() {
   const grid = document.getElementById('homeGrid');
@@ -17,7 +18,8 @@ export function init() {
   ];
 
   grid.innerHTML = pages.map(p => `
-    <div onclick="window.location.hash='${p.id}'" class="rounded-2xl p-6 shadow-md hover:shadow-lg transition cursor-pointer ${p.color} text-white flex flex-col items-center justify-center text-center hover:-translate-y-1 duration-200">
+    <div onclick="window.location.hash='${p.id}'" 
+         class="rounded-2xl p-6 shadow-md hover:shadow-lg transition cursor-pointer ${p.color} text-white flex flex-col items-center justify-center text-center hover:-translate-y-1 duration-200">
       <i class="fas fa-${p.icon} text-3xl mb-3"></i>
       <h3 class="font-bold text-lg">${p.label}</h3>
     </div>
