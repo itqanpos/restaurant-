@@ -1,3 +1,5 @@
+import { AppState } from '../state/store.js';
+
 class Router {
   constructor() {
     window.addEventListener('hashchange', () => this.resolve());
@@ -13,28 +15,23 @@ class Router {
 
   async resolve() {
     const page = window.location.hash.slice(1) || 'home';
+    AppState.currentPage = page;
     const container = document.getElementById('pageContainer');
     if (!container) return;
 
     try {
-      const response = await fetch(`src/pages/${page}/${page}.html`);
-      if (!response.ok) throw new Error('Page not found');
+      const response = await fetch(`/src/pages/${page}/${page}.html`);
       const html = await response.text();
       container.innerHTML = html;
 
-      // استدعاء init للصفحة
+      // استيراد جافا سكريبت الصفحة
       const module = await import(`../pages/${page}/${page}.js`);
-      if (module && typeof module.init === 'function') {
-        module.init();
-      }
+      if (module.init) module.init();
     } catch (err) {
-      console.error('فشل تحميل الصفحة:', err);
-      container.innerHTML = `<h2 class="text-2xl font-bold p-6">404 - الصفحة غير موجودة</h2>`;
+      container.innerHTML = `<h2 class="text-2xl font-bold p-6">صفحة غير موجودة</h2>`;
     }
 
-    // تحديث عنوان الهيدر
-    const titles = { home: 'الرئيسية', pos: 'الكاشير', kitchen: 'المطبخ', dashboard: 'الرئيسية', login: 'تسجيل الدخول' };
-    document.getElementById('headerTitle').textContent = titles[page] || page;
+    document.getElementById('headerTitle').textContent = AppState.t(page);
   }
 }
 
